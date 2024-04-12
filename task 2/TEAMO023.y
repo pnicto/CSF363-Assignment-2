@@ -7,7 +7,7 @@ int yylex();
 void yyerror();
 %}
 
-%token PROGRAM BEGIN END DOT SEMICOLON IDENTIFIER COMMA E
+%token PROGRAM BEGIN END DOT SEMICOLON IDENTIFIER COMMA E COLON
 
 %%
 program: program_heading block DOT
@@ -21,7 +21,19 @@ declaration_part:
                 ;
 statement_part: BEGIN statement_sequence END
               ;
-
+variable_declaration_part: VAR variable_declaration SEMICOLON more_variable_declarations
+                         ;
+more_variable_declarations: variable_declaration SEMICOLON more_variable_declarations
+              |
+              ;
+variable_declaration: identifier_list COLON type
+                    ;
+identifier_list: identifier COMMA identifier_list
+               | identifier
+               ;
+statement_sequence: statement SEMICOLON statement_sequence
+                  | statement
+                  ;
 %%
 
 int main() {

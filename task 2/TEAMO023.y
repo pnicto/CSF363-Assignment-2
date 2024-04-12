@@ -7,7 +7,7 @@ int yylex();
 void yyerror();
 %}
 
-%token PROGRAM BEGIN END DOT SEMICOLON IDENTIFIER COMMA E COLON
+%token PROGRAM BEGIN END DOT SEMICOLON IDENTIFIER COMMA E COLON ASSIGNMENT READ WRITE LPAREN RPAREN
 
 %%
 program: program_heading block DOT
@@ -31,9 +31,32 @@ variable_declaration: identifier_list COLON type
 identifier_list: identifier COMMA identifier_list
                | identifier
                ;
-statement_sequence: statement SEMICOLON statement_sequence
+statement_sequence: statement SEMICOLON statement
                   | statement
                   ;
+statement: simple_statement
+         | structured_statement
+         ;
+simple_statement: assignment_statement
+                | procedure_statement
+                ;
+assignment_statement: variable ASSIGNMENT expression
+                    ;
+procedure_statement: READ actual_parameter_list
+                   | WRITE actual_parameter_list
+                   ;
+actual_parameter_list: LPAREN actual_parameter other_actual_parameters RPAREN
+                     ;
+other_actual_parameters: COMMA actual_parameter other_actual_parameters
+                       |
+                       ;
+actual_parameter: actual_value
+                | actual_variable
+                ;
+actual_value: expression
+            ;
+actual_variable: variable
+               ;
 %%
 
 int main() {

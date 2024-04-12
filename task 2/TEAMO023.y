@@ -7,7 +7,7 @@ int yylex();
 void yyerror();
 %}
 
-%token PROGRAM BEGIN END DOT SEMICOLON IDENTIFIER COMMA E COLON ASSIGNMENT READ WRITE LPAREN RPAREN
+%token PROGRAM BEGIN END DOT SEMICOLON IDENTIFIER COMMA E COLON ASSIGNMENT READ WRITE LPAREN RPAREN WHILE DO FOR TO DOWNTO IF THEN ELSE
 
 %%
 program: program_heading block DOT
@@ -57,6 +57,23 @@ actual_value: expression
             ;
 actual_variable: variable
                ;
+structured_statement: compound_statement
+                    | repetitive_statement
+                    | if_statement
+                    ;
+compound_statement: BEGIN statement_sequence END
+                  ;
+repetitive_statement: while_statement
+                     | for_statement
+                     ;
+while_statement: WHILE expression DO statement
+               ;
+for_statement: FOR identifier ASSIGNMENT expression TO expression DO statement
+             | FOR identifier ASSIGNMENT expression DOWNTO expression DO statement
+             ;
+if_statement: IF expression THEN statement
+            | IF expression THEN statement ELSE statement
+            ;
 %%
 
 int main() {

@@ -24,7 +24,7 @@ statement_part: BEGIN statement_sequence END
 variable_declaration_part: VAR variable_declaration SEMICOLON more_variable_declarations
                          ;
 more_variable_declarations: variable_declaration SEMICOLON more_variable_declarations
-              |
+                          |
               ;
 variable_declaration: identifier_list COLON type
                     ;

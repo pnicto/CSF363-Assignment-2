@@ -8,8 +8,8 @@ void yyerror();
 %}
 
 // E = "E" | "e"
-%token PROGRAM BEGIN END DOT SEMICOLON COMMA COLON ASSIGNMENT READ WRITE LPAREN RPAREN WHILE DO FOR TO DOWNTO IF THEN ELSE PLUS MINUS MULTIPLY DIVIDE REMAINDER AND OR EQUAL NOT_EQUAL LESS LESS_OR_EQUAL GREATER GREATER_OR_EQUAL LSQUAREPAREN RSQUAREPAREN E SQUOTE OF ARRAY DOTDOT VAR
-// TODO: string_character
+// ESCAPE_SEQUENCE = '' (two single quotes)
+%token PROGRAM BEGIN END DOT SEMICOLON COMMA COLON ASSIGNMENT READ WRITE LPAREN RPAREN WHILE DO FOR TO DOWNTO IF THEN ELSE PLUS MINUS MULTIPLY DIVIDE REMAINDER AND OR EQUAL NOT_EQUAL LESS LESS_OR_EQUAL GREATER GREATER_OR_EQUAL LSQUAREPAREN RSQUAREPAREN E SQUOTE OF ARRAY DOTDOT VAR ESCAPE_SEQUENCE ANY_CHARACTER_EXCEPT_QUOTE
 
 %%
 program: program_heading block DOT
@@ -151,7 +151,8 @@ string: SQUOTE string_character additional_string_characters SQUOTE
 additional_string_characters: string_character additional_string_characters
                             |
                             ;
-string_character: any_character_except_quote // what do here?
+string_character: ANY_CHARACTER_EXCEPT_QUOTE
+                | ESCAPE_SEQUENCE
                 ;
 constant: number
         | sign number

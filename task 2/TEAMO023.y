@@ -7,7 +7,9 @@ int yylex();
 void yyerror();
 %}
 
-%token PROGRAM BEGIN END DOT SEMICOLON COMMA COLON ASSIGNMENT READ WRITE LPAREN RPAREN WHILE DO FOR TO DOWNTO IF THEN ELSE PLUS MINUS MULTIPLY DIVIDE REMAINDER AND OR EQUAL NOT_EQUAL LESS LESS_OR_EQUAL GREATER GREATER_OR_EQUAL LSQUAREPAREN RSQUAREPAREN
+// E = "E" | "e"
+%token PROGRAM BEGIN END DOT SEMICOLON COMMA COLON ASSIGNMENT READ WRITE LPAREN RPAREN WHILE DO FOR TO DOWNTO IF THEN ELSE PLUS MINUS MULTIPLY DIVIDE REMAINDER AND OR EQUAL NOT_EQUAL LESS LESS_OR_EQUAL GREATER GREATER_OR_EQUAL LSQUAREPAREN RSQUAREPAREN E SQUOTE OF ARRAY DOTDOT VAR
+// TODO: string_character
 
 %%
 program: program_heading block DOT
@@ -31,6 +33,13 @@ variable_declaration: identifier_list COLON type
 identifier_list: identifier COMMA identifier_list
                | identifier
                ;
+type: identifier
+    | array_type
+    ;
+array_type: ARRAY LSQUAREPAREN subrange_type RSQUAREPAREN OF type
+          ;
+subrange_type: constant DOTDOT constant
+             ;
 statement_sequence: statement SEMICOLON statement
                   | statement
                   ;
@@ -115,6 +124,39 @@ variable: identifier
         ;
 indexed_variable: array_variable LSQUAREPAREN expression_list RSQUAREPAREN
                 ;
+expression_list: expression COMMA expression_list
+               | expression
+               ;
+number: integer_number
+      | real_number
+      ;
+integer_number: digit_sequence
+              ;
+real_number: digit_sequence DOT digit_sequence
+           | digit_sequence DOT scale_factor
+           | digit_sequence DOT digit_sequence scale_factor
+           | digit_sequence scale_factor
+           ;
+scale_factor: E digit_sequence
+            | E sign digit_sequence
+            ;
+unsigned_digit_sequence: digit
+                       | digit unsigned_digit_sequence
+                       ;
+digit_sequence: unsigned_digit_sequence
+              | sign unsigned_digit_sequence
+              ;
+string: SQUOTE string_character additional_string_characters SQUOTE
+      ;
+additional_string_characters: string_character additional_string_characters
+                            |
+                            ;
+string_character: any_character_except_quote // what do here?
+                ;
+constant: number
+        | sign number
+        | string
+        ;
 %%
 
 int main() {

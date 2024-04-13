@@ -158,6 +158,9 @@ constant: number
         | sign number
         | string
         ;
+sign: PLUS
+    | MINUS
+    ;
 %%
 
 int main() {

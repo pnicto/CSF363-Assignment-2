@@ -135,11 +135,8 @@ factor: variable
 variable: identifier
         | indexed_variable
         ;
-indexed_variable: array_variable LSQUAREPAREN expression_list RSQUAREPAREN
+indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN
                 ;
-expression_list: expression COMMA expression_list
-               | expression
-               ;
 number: integer_number
       | real_number
       ;

@@ -56,8 +56,9 @@ array_type: ARRAY LSQUAREPAREN subrange_type RSQUAREPAREN OF type
           ;
 subrange_type: constant DOTDOT constant
              ;
-statement_sequence: statement SEMICOLON statement
+statement_sequence: statement SEMICOLON statement_sequence
                   | statement
+                  |
                   ;
 statement: simple_statement
          | structured_statement

@@ -43,7 +43,7 @@ variable_declaration_part: VAR variable_declaration SEMICOLON more_variable_decl
                          ;
 more_variable_declarations: variable_declaration SEMICOLON more_variable_declarations
                           |
-              ;
+                          ;
 variable_declaration: identifier_list COLON type
                     ;
 identifier_list: identifier COMMA identifier_list

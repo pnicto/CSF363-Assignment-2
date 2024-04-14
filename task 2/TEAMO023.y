@@ -11,7 +11,7 @@ void yyerror();
 %token PROGRAM BEGIN END VAR
 
 // type tokens
-%token COLON ARRAY OF DOTDOT
+%token COLON ARRAY OF DOTDOT REAL INTEGER CHAR BOOLEAN
 
 // statement tokens
 %token ASSIGNMENT READ WRITE WHILE DO FOR TO DOWNTO IF THEN ELSE
@@ -49,7 +49,10 @@ variable_declaration: identifier_list COLON type
 identifier_list: identifier COMMA identifier_list
                | identifier
                ;
-type: identifier
+type: REAL
+    | INTEGER
+    | CHAR
+    | BOOLEAN
     | array_type
     ;
 array_type: ARRAY LSQUAREPAREN subrange_type RSQUAREPAREN OF type

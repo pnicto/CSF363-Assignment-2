@@ -71,7 +71,7 @@ simple_statement: assignment_statement
                 ;
 assignment_statement: variable ASSIGNMENT expression
                     ;
-procedure_statement: READ actual_parameter_list
+procedure_statement: READ LPAREN variable RPAREN
                    | WRITE actual_parameter_list
                    ;
 actual_parameter_list: LPAREN actual_parameter other_actual_parameters RPAREN

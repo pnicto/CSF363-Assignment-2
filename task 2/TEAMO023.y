@@ -90,8 +90,8 @@ repetitive_statement: while_statement
                     ;
 while_statement: WHILE expression DO statement
                ;
-for_statement: FOR variable_identifer ASSIGNMENT expression TO expression DO statement
-             | FOR variable_identifer ASSIGNMENT expression DOWNTO expression DO statement
+for_statement: FOR identifier ASSIGNMENT expression TO expression DO statement
+             | FOR identifier ASSIGNMENT expression DOWNTO expression DO statement
              ;
 if_statement: IF expression THEN statement
             | IF expression THEN statement ELSE statement

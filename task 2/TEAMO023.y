@@ -76,13 +76,9 @@ actual_parameter_list: LPAREN actual_parameter other_actual_parameters RPAREN
 other_actual_parameters: COMMA actual_parameter other_actual_parameters
                        |
                        ;
-actual_parameter: actual_value
-                | actual_variable
+actual_parameter: expression
+                | variable
                 ;
-actual_value: expression
-            ;
-actual_variable: variable
-               ;
 structured_statement: compound_statement
                     | repetitive_statement
                     | if_statement

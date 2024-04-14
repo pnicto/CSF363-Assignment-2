@@ -101,7 +101,7 @@ expression: simple_expression relational_operator simple_expression
           ;
 simple_expression: term additional_terms
                  | sign term additional_terms
-                ;
+                 ;
 additional_terms: addition_operator term additional_terms
                 |
                 ;

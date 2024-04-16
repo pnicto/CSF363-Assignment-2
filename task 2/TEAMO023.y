@@ -8,7 +8,7 @@ void yyerror();
 %}
 
 // program tokens
-%token PROGRAM BEGIN END VAR
+%token PROGRAM BEGINNING END VAR
 
 // type tokens
 %token COLON ARRAY OF DOTDOT REAL INTEGER CHAR BOOLEAN
@@ -17,27 +17,27 @@ void yyerror();
 %token ASSIGNMENT READ WRITE WHILE DO FOR TO DOWNTO IF THEN ELSE
 
 // expression tokens
-%token MULTIPLY DIVIDE REMAINDER AND OR EQUAL NOT_EQUAL LESS LESS_OR_EQUAL GREATER GREATER_OR_EQUAL
+%token MULTIPLY DIVIDE REMAINDER AND OR NOT EQUAL NOT_EQUAL LESS LESS_OR_EQUAL GREATER GREATER_OR_EQUAL
 
 // low level definitions
 // E = "E" | "e"
 // ESCAPE_SEQUENCE = '' (two single quotes)
-%token PLUS MINUS E SQUOTE ESCAPE_SEQUENCE ANY_CHARACTER_EXCEPT_QUOTE
+%token PLUS MINUS E DQUOTE ESCAPE_SEQUENCE ANY_CHARACTER_EXCEPT_QUOTE DIGIT
 
 // misc tokens (includes tokens that are shared by different groups)
-%token DOT SEMICOLON COMMA LPAREN RPAREN LSQUAREPAREN RSQUAREPAREN
+%token DOT SEMICOLON COMMA LPAREN RPAREN LSQUAREPAREN RSQUAREPAREN IDENTIFIER ERROR
 
 %%
-program: program_heading block DOT
+program: program_heading block DOT { printf("TEMP DEBUG MESSAGE: yeah grammar seems right :thumbsup:\n"); return 0; }
        ;
-program_heading: PROGRAM identifier SEMICOLON
+program_heading: PROGRAM IDENTIFIER SEMICOLON
                ;
 block: declaration_part statement_part
      ;
 declaration_part:
                 | variable_declaration_part
                 ;
-statement_part: BEGIN statement_sequence END
+statement_part: BEGINNING statement_sequence END
               ;
 variable_declaration_part: VAR variable_declaration SEMICOLON more_variable_declarations
                          ;
@@ -46,8 +46,8 @@ more_variable_declarations: variable_declaration SEMICOLON more_variable_declara
                           ;
 variable_declaration: identifier_list COLON type
                     ;
-identifier_list: identifier COMMA identifier_list
-               | identifier
+identifier_list: IDENTIFIER COMMA identifier_list
+               | IDENTIFIER
                ;
 type: REAL
     | INTEGER
@@ -86,15 +86,15 @@ structured_statement: compound_statement
                     | repetitive_statement
                     | if_statement
                     ;
-compound_statement: BEGIN statement_sequence END
+compound_statement: BEGINNING statement_sequence END
                   ;
 repetitive_statement: while_statement
                     | for_statement
                     ;
 while_statement: WHILE expression DO statement
                ;
-for_statement: FOR identifier ASSIGNMENT expression TO expression DO statement
-             | FOR identifier ASSIGNMENT expression DOWNTO expression DO statement
+for_statement: FOR IDENTIFIER ASSIGNMENT expression TO expression DO statement
+             | FOR IDENTIFIER ASSIGNMENT expression DOWNTO expression DO statement
              ;
 if_statement: IF expression THEN statement
             | IF expression THEN statement ELSE statement
@@ -135,7 +135,7 @@ factor: variable
       | LPAREN expression RPAREN
       | NOT factor
       ;
-variable: identifier
+variable: IDENTIFIER
         | indexed_variable
         ;
 indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN
@@ -153,13 +153,13 @@ real_number: digit_sequence DOT digit_sequence
 scale_factor: E digit_sequence
             | E sign digit_sequence
             ;
-unsigned_digit_sequence: digit
-                       | digit unsigned_digit_sequence
+unsigned_digit_sequence: DIGIT
+                       | DIGIT unsigned_digit_sequence
                        ;
 digit_sequence: unsigned_digit_sequence
               | sign unsigned_digit_sequence
               ;
-string: SQUOTE string_character additional_string_characters SQUOTE
+string: DQUOTE string_character additional_string_characters DQUOTE
       ;
 additional_string_characters: string_character additional_string_characters
                             |

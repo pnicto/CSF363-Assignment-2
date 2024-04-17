@@ -27,6 +27,10 @@ void yyerror();
 // misc tokens (includes tokens that are shared by different groups)
 %token DOT SEMICOLON COMMA LPAREN RPAREN LSQUAREPAREN RSQUAREPAREN IDENTIFIER ERROR
 
+
+// Precedence rule for else shift-reduce conflict
+%right THEN ELSE
+
 %%
 program: program_heading block DOT { printf("TEMP DEBUG MESSAGE: yeah grammar seems right :thumbsup:\n"); return 0; }
        ;
@@ -80,7 +84,6 @@ other_actual_parameters: COMMA actual_parameter other_actual_parameters
                        |
                        ;
 actual_parameter: expression
-                | variable
                 ;
 structured_statement: compound_statement
                     | repetitive_statement
@@ -103,7 +106,6 @@ expression: simple_expression relational_operator simple_expression
           | simple_expression
           ;
 simple_expression: term additional_terms
-                 | sign term additional_terms
                  ;
 additional_terms: addition_operator term additional_terms
                 |
@@ -113,8 +115,10 @@ addition_operator: PLUS
                  | OR
                  ;
 term: factor additional_factors
+    | sign factor additional_factors
     ;
 additional_factors: multiplication_operator factor additional_factors
+                  | multiplication_operator sign factor additional_factors
                   |
                   ;
 multiplication_operator: MULTIPLY
@@ -134,6 +138,7 @@ factor: variable
       | string
       | LPAREN expression RPAREN
       | NOT factor
+      | NOT sign factor
       ;
 variable: IDENTIFIER
         | indexed_variable
@@ -157,7 +162,6 @@ unsigned_digit_sequence: DIGIT
                        | DIGIT unsigned_digit_sequence
                        ;
 digit_sequence: unsigned_digit_sequence
-              | sign unsigned_digit_sequence
               ;
 string: DQUOTE string_character additional_string_characters DQUOTE
       ;

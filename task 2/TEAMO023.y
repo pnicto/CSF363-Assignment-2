@@ -33,7 +33,7 @@ void yyerror();
 %right THEN ELSE
 
 %%
-program: program_heading block DOT { printf("TEMP DEBUG MESSAGE: yeah grammar seems right :thumbsup:\n"); return 0; }
+program: program_heading block DOT { printf("valid input\n"); return 0; }
        ;
 program_heading: PROGRAM IDENTIFIER SEMICOLON
                ;
@@ -85,6 +85,7 @@ other_actual_parameters: COMMA actual_parameter other_actual_parameters
                        |
                        ;
 actual_parameter: expression
+                | string
                 ;
 structured_statement: compound_statement
                     | repetitive_statement
@@ -136,7 +137,6 @@ relational_operator: EQUAL
                    ;
 factor: variable
       | number
-      | string
       | LPAREN expression RPAREN
       | NOT factor
       | NOT sign factor
@@ -174,7 +174,6 @@ string_character: ANY_CHARACTER_EXCEPT_QUOTE
                 ;
 constant: number
         | sign number
-        | string
         ;
 sign: PLUS
     | MINUS
@@ -189,5 +188,5 @@ int main() {
 }
 
 void yyerror() {
-  printf("Syntax error\n");
+  printf("syntax error\n");
 }

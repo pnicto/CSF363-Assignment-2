@@ -73,5 +73,5 @@ WHITESPACE \n|\t|" "
 {WHITESPACE}*[A-Za-z][a-zA-Z0-9_]* { return IDENTIFIER; }
 
  /* catch errors in all states */
-<*>. { return ERROR; }
+<*>.|\n { return ERROR; }
 %%

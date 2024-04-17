@@ -1,0 +1,8 @@
+*
+
+!.gitignore
+!*.y
+!*.l
+!readme.txt
+
+!*/

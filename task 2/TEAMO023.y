@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
+extern FILE *yyin;
 int yylex();
 void yyerror();
 %}
@@ -181,6 +182,8 @@ sign: PLUS
 %%
 
 int main() {
+  FILE *file = fopen("input.txt", "r");
+  yyin = file;
   yyparse();
   return 0;
 }

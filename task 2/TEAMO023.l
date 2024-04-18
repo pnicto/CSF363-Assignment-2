@@ -71,6 +71,9 @@ WHITESPACE \n|\t|" "
 
 {WHITESPACE}*[A-Za-z][a-zA-Z0-9_]* { return IDENTIFIER; }
 
+ /* Deal with single line comments */
+{WHITESPACE}*"//".* { /* Do nothing */ }
+
  /* catch errors in all states */
 <*>.|\n { return ERROR; }
 %%

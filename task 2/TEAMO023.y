@@ -23,7 +23,7 @@ void yyerror();
 // low level definitions
 // E = "E" | "e"
 // ESCAPE_SEQUENCE = '' (two single quotes)
-%token PLUS MINUS E DQUOTE ESCAPE_SEQUENCE ANY_CHARACTER_EXCEPT_QUOTE DIGIT
+%token PLUS MINUS E DQUOTE ANY_CHARACTER_EXCEPT_QUOTE DIGIT
 
 // misc tokens (includes tokens that are shared by different groups)
 %token DOT SEMICOLON COMMA LPAREN RPAREN LSQUAREPAREN RSQUAREPAREN IDENTIFIER ERROR
@@ -75,6 +75,7 @@ simple_statement: assignment_statement
                 | procedure_statement
                 ;
 assignment_statement: variable ASSIGNMENT expression
+                    | variable ASSIGNMENT string
                     ;
 procedure_statement: READ LPAREN variable RPAREN
                    | WRITE actual_parameter_list
@@ -170,7 +171,6 @@ additional_string_characters: string_character additional_string_characters
                             |
                             ;
 string_character: ANY_CHARACTER_EXCEPT_QUOTE
-                | ESCAPE_SEQUENCE
                 ;
 constant: number
         | sign number

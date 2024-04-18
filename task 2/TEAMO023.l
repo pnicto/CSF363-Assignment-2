@@ -55,7 +55,6 @@ WHITESPACE \n|\t|" "
 {WHITESPACE}*"-" { return MINUS; }
 {WHITESPACE}*(?i:e) { return E; }
 {WHITESPACE}*\" { BEGIN STRING; return DQUOTE; }
-<STRING>{WHITESPACE}*"''" { return ESCAPE_SEQUENCE; }
  /* we also don't match \n in strings */
 <STRING>{WHITESPACE}*[^"\n] { return ANY_CHARACTER_EXCEPT_QUOTE; }
 <STRING>{WHITESPACE}*\" { BEGIN INITIAL; return DQUOTE; }

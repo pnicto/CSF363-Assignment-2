@@ -31,9 +31,9 @@ WHITESPACE \t|" "
 {WHITESPACE}*(?i:var) { addNewToken(yytext, "Keyword"); }
  
  /* type tokens */
-{WHITESPACE}*":" { addNewToken(yytext, "TBD, Punctuator?"); }
-{WHITESPACE}*(?i:array) { addNewToken(yytext, "TBD, Keyword?"); }
-{WHITESPACE}*(?i:of) { addNewToken(yytext, "TBD, Keyword?"); }
+{WHITESPACE}*":" { addNewToken(yytext, "Punctuator"); }
+{WHITESPACE}*(?i:array) { addNewToken(yytext, "Keyword"); }
+{WHITESPACE}*(?i:of) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*".." { addNewToken(yytext, "TBD, Subrange?"); }
 {WHITESPACE}*(?i:real) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:integer) { addNewToken(yytext, "Keyword"); }
@@ -41,7 +41,7 @@ WHITESPACE \t|" "
 {WHITESPACE}*(?i:boolean) { addNewToken(yytext, "Keyword"); }
 
  /* statement tokens */
-{WHITESPACE}*":=" { addNewToken(yytext, "Assignment Operator"); }
+{WHITESPACE}*":=" { addNewToken(yytext, "Operator"); }
 {WHITESPACE}*(?i:read) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:write) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:while) { addNewToken(yytext, "Keyword"); }
@@ -54,30 +54,28 @@ WHITESPACE \t|" "
 {WHITESPACE}*(?i:else) { addNewToken(yytext, "Keyword"); }
 
  /* expression tokens */
-{WHITESPACE}*"*" { addNewToken(yytext, "Arithmetic Operator"); }
-{WHITESPACE}*"/" { addNewToken(yytext, "Arithmetic Operator"); }
-{WHITESPACE}*"%" { addNewToken(yytext, "Arithmetic Operator"); }
+{WHITESPACE}*"*" { addNewToken(yytext, "Operator"); }
+{WHITESPACE}*"/" { addNewToken(yytext, "Operator"); }
+{WHITESPACE}*"%" { addNewToken(yytext, "Operator"); }
 {WHITESPACE}*(?i:and) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:or) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:not) { addNewToken(yytext, "Keyword"); }
-{WHITESPACE}*"=" { addNewToken(yytext, "Relational Operator"); }
-{WHITESPACE}*"<>" { addNewToken(yytext, "Relational Operator"); }
-{WHITESPACE}*"<" { addNewToken(yytext, "Relational Operator"); }
-{WHITESPACE}*"<=" { addNewToken(yytext, "Relational Operator"); }
-{WHITESPACE}*">" { addNewToken(yytext, "Relational Operator"); }
-{WHITESPACE}*">=" { addNewToken(yytext, "Relational Operator"); }
+{WHITESPACE}*"=" { addNewToken(yytext, "Operator"); }
+{WHITESPACE}*"<>" { addNewToken(yytext, "Operator"); }
+{WHITESPACE}*"<" { addNewToken(yytext, "Operator"); }
+{WHITESPACE}*"<=" { addNewToken(yytext, "Operator"); }
+{WHITESPACE}*">" { addNewToken(yytext, "Operator"); }
+{WHITESPACE}*">=" { addNewToken(yytext, "Operator"); }
 
  /* low level definitions */
-{WHITESPACE}*"+" { addNewToken(yytext, "Arithmetic Operator"); }
-{WHITESPACE}*"-" { addNewToken(yytext, "Arithmetic Operator"); }
-{WHITESPACE}*(?i:e) { addNewToken(yytext, "E"); }
+{WHITESPACE}*"+" { addNewToken(yytext, "Operator"); }
+{WHITESPACE}*"-" { addNewToken(yytext, "Operator"); }
  /* Current implementation for strings also stores the double quotes" */
 {WHITESPACE}*\" { BEGIN STRING; yymore(); }
  /* we also don't match \n in strings */
 <STRING>{WHITESPACE}*[^"\n] { yymore(); }
 <STRING>{WHITESPACE}*\" { BEGIN INITIAL; addNewToken(yytext, "String"); }
-{WHITESPACE}*[0-9] { addNewToken(yytext, "TBD"); }
- /* TODO: Deal with numbers, regular and floating type */
+{WHITESPACE}*[0-9]+([.][0-9]+)?((?i:e)[0-9]+([.][0-9]+)?)? { addNewToken(yytext, "Number"); }
 
  /* misc tokens */
 {WHITESPACE}*"." { addNewToken(yytext, "Punctuator"); }
@@ -94,10 +92,10 @@ WHITESPACE \t|" "
 {WHITESPACE}*"//".* { /* Do nothing */ }
 
  /* Deal with new lines */
-\n { lineNumber++; } 
+{WHITESPACE}*\n { lineNumber++; } 
 
  /* catch errors in all states */
-<*>.|\n { /* TODO: Deal with errors */ }
+<*>.|\n { addNewToken(yytext, "Unrecognized Token"); }
 %%
 
 void addNewToken(char *lexeme, char *tokenType) {

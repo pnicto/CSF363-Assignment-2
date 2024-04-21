@@ -34,7 +34,7 @@ WHITESPACE \t|" "
 {WHITESPACE}*":" { addNewToken(yytext, "Punctuator"); }
 {WHITESPACE}*(?i:array) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:of) { addNewToken(yytext, "Keyword"); }
-{WHITESPACE}*".." { addNewToken(yytext, "TBD, Subrange?"); }
+{WHITESPACE}*".." { addNewToken(yytext, "Operator"); }
 {WHITESPACE}*(?i:real) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:integer) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:char) { addNewToken(yytext, "Keyword"); }

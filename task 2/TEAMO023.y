@@ -75,7 +75,7 @@ simple_statement: assignment_statement
                 | procedure_statement
                 ;
 assignment_statement: variable ASSIGNMENT expression
-                    | variable ASSIGNMENT string
+                    | variable ASSIGNMENT char
                     ;
 procedure_statement: READ LPAREN variable RPAREN
                    | WRITE actual_parameter_list
@@ -166,6 +166,8 @@ unsigned_digit_sequence: DIGIT
 digit_sequence: unsigned_digit_sequence
               ;
 string: DQUOTE string_character additional_string_characters DQUOTE
+      ;
+char: DQUOTE string_character DQUOTE
       ;
 additional_string_characters: string_character additional_string_characters
                             |

@@ -75,7 +75,7 @@ WHITESPACE \t|" "
  /* we also don't match \n in strings */
 <STRING>{WHITESPACE}*[^"\n] { yymore(); }
 <STRING>{WHITESPACE}*\" { BEGIN INITIAL; addNewToken(yytext, "String"); }
-{WHITESPACE}*[0-9]+([.][0-9]+)?((?i:e)[0-9]+([.][0-9]+)?)? { addNewToken(yytext, "Number"); }
+{WHITESPACE}*[0-9]+([.][0-9]+)?((?i:e)[+-]?[0-9]+([.][0-9]+)?)? { addNewToken(yytext, "Number"); }
 
  /* misc tokens */
 {WHITESPACE}*"." { addNewToken(yytext, "Punctuator"); }

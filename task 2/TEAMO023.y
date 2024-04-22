@@ -97,14 +97,17 @@ compound_statement: BEGINNING statement_sequence END
 repetitive_statement: while_statement
                     | for_statement
                     ;
-while_statement: WHILE expression DO statement
+while_statement: WHILE conditional_expression DO statement
                ;
 for_statement: FOR IDENTIFIER ASSIGNMENT expression TO expression DO statement
              | FOR IDENTIFIER ASSIGNMENT expression DOWNTO expression DO statement
              ;
-if_statement: IF expression THEN statement
-            | IF expression THEN statement ELSE statement
+if_statement: IF conditional_expression THEN statement
+            | IF conditional_expression THEN statement ELSE statement
             ;
+conditional_expression: simple_expression relational_operator simple_expression
+                     | variable
+                     ;
 expression: simple_expression relational_operator simple_expression
           | simple_expression
           ;

@@ -21,7 +21,7 @@
 
 WHITESPACE \t|" "
 
-%x STRING
+%x STRING WRITE WRITESTRING
 
 %%
  /* program tokens */
@@ -43,7 +43,7 @@ WHITESPACE \t|" "
  /* statement tokens */
 {WHITESPACE}*":=" { addNewToken(yytext, "Operator"); }
 {WHITESPACE}*(?i:read) { addNewToken(yytext, "Keyword"); }
-{WHITESPACE}*(?i:write) { addNewToken(yytext, "Keyword"); }
+{WHITESPACE}*(?i:write) { BEGIN WRITE; addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:while) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:do) { addNewToken(yytext, "Keyword"); }
 {WHITESPACE}*(?i:for) { addNewToken(yytext, "Keyword"); }
@@ -74,7 +74,12 @@ WHITESPACE \t|" "
 {WHITESPACE}*\" { BEGIN STRING; yymore(); }
  /* we also don't match \n in strings */
 <STRING>{WHITESPACE}*[^"\n] { yymore(); }
-<STRING>{WHITESPACE}*\" { BEGIN INITIAL; addNewToken(yytext, "String"); }
+<STRING>{WHITESPACE}*\" { BEGIN INITIAL; trimSpaces(yytext); if(strlen(yytext) > 3) { addNewToken(yytext, "String"); } else { addNewToken(yytext, "Character"); } }
+ /* Implementation of strings for write */
+<WRITE>{WHITESPACE}*\" { BEGIN WRITESTRING; yymore(); }
+ /* we also don't match \n in strings */
+<WRITESTRING>{WHITESPACE}*[^"\n] { yymore(); }
+<WRITESTRING>{WHITESPACE}*\" { BEGIN WRITE; addNewToken(yytext, "String"); }
 {WHITESPACE}*[0-9]+([.][0-9]+)?((?i:e)[+-]?[0-9]+([.][0-9]+)?)? { addNewToken(yytext, "Number"); }
 
  /* misc tokens */
@@ -82,11 +87,14 @@ WHITESPACE \t|" "
 {WHITESPACE}*";" { addNewToken(yytext, "Punctuator"); }
 {WHITESPACE}*"," { addNewToken(yytext, "Punctuator"); }
 {WHITESPACE}*"(" { addNewToken(yytext, "Punctuator"); }
+<WRITE>{WHITESPACE}*"(" { addNewToken(yytext, "Punctuator"); }
+<WRITE>{WHITESPACE}*")" { BEGIN INITIAL; addNewToken(yytext, "Punctuator"); }
 {WHITESPACE}*")" { addNewToken(yytext, "Punctuator"); }
 {WHITESPACE}*"[" { addNewToken(yytext, "Punctuator"); }
 {WHITESPACE}*"]" { addNewToken(yytext, "Punctuator"); }
 
 {WHITESPACE}*[A-Za-z][a-zA-Z0-9_]* { addNewToken(yytext, "Identifier"); }
+<WRITE>{WHITESPACE}*[A-Za-z][a-zA-Z0-9_]* { addNewToken(yytext, "Identifier"); }
 
  /* Deal with single line comments */
 {WHITESPACE}*"//".* { /* Do nothing */ }

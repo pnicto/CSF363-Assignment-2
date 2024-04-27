@@ -2,8 +2,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdarg.h>
 
 struct SymbolTable symbolTable;
+
+#define DEL 1
+#define EPS 5
+#define LMAX 1000
+#define CMAX 1000
+char graph[LMAX][CMAX];
+int graphNumber = 0;
 %}
 
 %code requires {
@@ -103,6 +111,45 @@ struct SymbolTable symbolTable;
     int controlIndex;
     int oldControlAssignmentStatus;
   };
+
+// graph related declarations
+  typedef enum { CONSTANT, ID, OPERATOR } NodeType;
+
+  typedef struct {
+    int value;
+  } ConstantNode;
+
+  typedef struct {
+    char* name;
+  } IdentifierNode;
+
+  typedef struct {
+    int opr;
+    int nOperands;
+    struct Node* operands[1];
+  } OperatorNode;
+
+  typedef struct Node {
+    NodeType type;
+    union {
+      ConstantNode constant;
+      IdentifierNode identifier;
+      OperatorNode opr;
+    };
+  } Node;
+
+  void graphInit(void);
+  void graphFinish();
+  void graphBox(char *s, int *w, int *h);
+  void graphDrawBox(char *s, int c, int l);
+  void graphDrawArrow(int c1, int l1, int c2, int l2);
+  void drawNode(Node *p, int c, int l, int *ce, int *cm);
+  int createAST(Node *p);
+
+  // this file declarations
+  Node *opr(int oper, int nops, ...);
+  Node *id(char* name);
+  Node *con(int value);
 }
 
 %union {
@@ -218,7 +265,7 @@ identifier_list: IDENTIFIER COMMA identifier_list { for (int i = 0; i < $3.size;
                                                         return 1;
                                                       }
                                                     }
-                                                    
+
                                                     $$.size = 1 + $3.size;
                                                     $$.identifiers[0] = $1;
                                                     for (int i = 0; i < $3.size; i++) {
@@ -236,7 +283,7 @@ array_type: ARRAY LSQUAREPAREN subrange_type RSQUAREPAREN OF type { if($6.type =
                                                                       printf("Error: array element type can't be another array\n");
                                                                       return 1;
                                                                     }
-                                                                    
+
                                                                     $$.type = ARRAY_TYPE;
                                                                     $$.valueType = $6.type;
                                                                     $$.minIndex = $3.minIndex;
@@ -251,7 +298,7 @@ subrange_type: constant DOTDOT constant { if (!($1.type == INTEGER_TYPE && $3.ty
                                             printf("Error: array's min index is larger than max index\n");
                                             return 1;
                                           }
-                                          
+
                                           $$.minIndex = $1.integerValue;
                                           $$.maxIndex = $3.integerValue; }
              ;
@@ -269,7 +316,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                           printf("Error: can't assign to array variable %s directly\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                           return 1;
                                                         }
-                                                        
+
                                                         if (!$1.isIndexed) {
                                                           if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.type == $3 || (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == REAL_TYPE && $3 == INTEGER_TYPE))) {
                                                             printf("Error: can't assign value of incompatible type to variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
@@ -346,17 +393,17 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                     return 1;
                                                                   }
                                                                   free($2);
-                                                                  
+
                                                                   if (symbolTable.variables[variableIndex].typeInfo.type != INTEGER_TYPE) {
                                                                     printf("Error: non ordinal variable %s can't be used as for-loop control\n", symbolTable.variables[variableIndex].identifier);
                                                                     return 1;
                                                                   }
-                                                                  
+
                                                                   if ($4 != INTEGER_TYPE || $6 != INTEGER_TYPE) {
                                                                     printf("Error: can't use non integral expression for for-loop control\n");
                                                                     return 1;
                                                                   }
-                                                                  
+
                                                                   $$.oldControlAssignmentStatus = symbolTable.variables[variableIndex].valueHasBeenAssigned;
                                                                   $$.controlIndex = variableIndex;
                                                                   symbolTable.variables[variableIndex].valueHasBeenAssigned = 1;
@@ -375,17 +422,17 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                         return 1;
                                                                       }
                                                                       free($2);
-                                                                      
+
                                                                       if (symbolTable.variables[variableIndex].typeInfo.type != INTEGER_TYPE) {
                                                                         printf("Error: non ordinal variable %s can't be used as for-loop control\n", symbolTable.variables[variableIndex].identifier);
                                                                         return 1;
                                                                       }
-                                                                      
+
                                                                       if ($4 != INTEGER_TYPE || $6 != INTEGER_TYPE) {
                                                                         printf("Error: can't use non integral expression for for-loop control\n");
                                                                         return 1;
                                                                       }
-                                                                      
+
                                                                       $$.oldControlAssignmentStatus = symbolTable.variables[variableIndex].valueHasBeenAssigned;
                                                                       $$.controlIndex = variableIndex;
                                                                       symbolTable.variables[variableIndex].valueHasBeenAssigned = 1;
@@ -404,13 +451,13 @@ expression: simple_expression relational_operator simple_expression { if (!(($1 
                                                                         printf("Error: can't apply relation operator on non-numeric value\n");
                                                                         return 1;
                                                                       }
-                                                                      
+
                                                                       $$ = BOOLEAN_TYPE; }
           | simple_expression { $$ = $1; }
           ;
 simple_expression: additional_terms term  { if (!$1.isNull) {
                                               switch ($1.additionOperator) {
-                                                case OR_SIGN: 
+                                                case OR_SIGN:
                                                   if ($2 == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                     $$ = BOOLEAN_TYPE;
                                                   } else {
@@ -427,7 +474,7 @@ simple_expression: additional_terms term  { if (!$1.isNull) {
                                                     $$ = ($2 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                                   }
                                                   break;
-                                                
+
                                                 case MINUS_OPERATOR:
                                                   if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
                                                     printf("Error: can't apply subtraction operator on non-numeric value\n");
@@ -443,7 +490,7 @@ simple_expression: additional_terms term  { if (!$1.isNull) {
                  ;
 additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
                                                               switch ($1.additionOperator) {
-                                                                case OR_SIGN: 
+                                                                case OR_SIGN:
                                                                   if ($2 == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                     $$.type = BOOLEAN_TYPE;
                                                                   } else {
@@ -460,7 +507,7 @@ additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
                                                                     $$.type = ($2 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                                                   }
                                                                   break;
-                                                                
+
                                                                 case MINUS_OPERATOR:
                                                                   if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
                                                                     printf("Error: can't apply subtraction operator on non-numeric value\n");
@@ -484,7 +531,7 @@ addition_operator: PLUS { $$ = PLUS_OPERATOR; }
                  ;
 term: additional_factors factor { if (!$1.isNull) {
                                     switch ($1.multiplicationOperator) {
-                                      case AND_SIGN: 
+                                      case AND_SIGN:
                                         if ($2 == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                           $$ = BOOLEAN_TYPE;
                                         } else {
@@ -493,7 +540,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                         }
                                         break;
 
-                                      case REMAINDER_SIGN: 
+                                      case REMAINDER_SIGN:
                                         if (!($2 == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                           printf("Error: can't apply modulo operator on non-integer value\n");
                                           return 1;
@@ -529,12 +576,12 @@ term: additional_factors factor { if (!$1.isNull) {
                                         }
                                         if (!$1.isNull) {
                                           switch ($1.multiplicationOperator) {
-                                            case AND_SIGN: 
+                                            case AND_SIGN:
                                               printf("Error: can't apply boolean operator on non-boolean value\n");
                                               return 1;
                                               break;
 
-                                            case REMAINDER_SIGN: 
+                                            case REMAINDER_SIGN:
                                               if (!($3 == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                 printf("Error: can't apply modulo operator on non-integer value\n");
                                                 return 1;
@@ -567,7 +614,7 @@ term: additional_factors factor { if (!$1.isNull) {
     ;
 additional_factors: additional_factors factor multiplication_operator { if (!$1.isNull) {
                                                                           switch ($1.multiplicationOperator) {
-                                                                            case AND_SIGN: 
+                                                                            case AND_SIGN:
                                                                               if ($2 == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                                 $$.type = BOOLEAN_TYPE;
                                                                               } else {
@@ -576,7 +623,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                               }
                                                                               break;
 
-                                                                            case REMAINDER_SIGN: 
+                                                                            case REMAINDER_SIGN:
                                                                               if (!($2 == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                                                 printf("Error: can't apply modulo operator on non-integer value\n");
                                                                                 return 1;
@@ -616,12 +663,12 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
 
                                                                               if (!$1.isNull) {
                                                                                 switch ($1.multiplicationOperator) {
-                                                                                  case AND_SIGN: 
+                                                                                  case AND_SIGN:
                                                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
                                                                                     return 1;
                                                                                     break;
 
-                                                                                  case REMAINDER_SIGN: 
+                                                                                  case REMAINDER_SIGN:
                                                                                     if (!($3 == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                                                       printf("Error: can't apply modulo operator on non-integer value\n");
                                                                                       return 1;
@@ -672,12 +719,12 @@ factor: variable  { if(symbolTable.variables[$1.symbolTableIndex].typeInfo.type 
                       printf("Error: can't use array variable %s directly as a value\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                       return 1;
                     }
-                    
+
                     if(!symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned) {
                       printf("Error: value of variable %s used before assigning \n", symbolTable.variables[$1.symbolTableIndex].identifier);
                       return 1;
                     }
-                    
+
                     if (!$1.isIndexed) {
                       $$ = symbolTable.variables[$1.symbolTableIndex].typeInfo.type;
                     } else {
@@ -693,7 +740,7 @@ factor: variable  { if(symbolTable.variables[$1.symbolTableIndex].typeInfo.type 
                         printf("Error: can't use boolean operator NOT on non boolean value\n");
                         return 1;
                       }
-                      
+
                       $$ = BOOLEAN_TYPE; }
       ;
 variable: IDENTIFIER  { int variableIndex = -1;
@@ -719,7 +766,7 @@ indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN { if (symbolTabl
                                                                     printf("Error: can't access indexed element of non-array variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                                     return 1;
                                                                   }
-                                                                  
+
                                                                   if ($3 != INTEGER_TYPE) {
                                                                     printf("Error: can't access non-integer index of array variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                                     return 1;
@@ -798,7 +845,7 @@ char: DQUOTE string_character DQUOTE  { if(strlen($2) != 1) {
                                           printf("Error: character literal can only be a string of length 1\n");
                                           return 1;
                                         }
-                                        
+
                                         $$ = $2; }
       ;
 additional_string_characters: string_character additional_string_characters { if ($2 == NULL) $$ = $1;
@@ -855,4 +902,207 @@ int main(int argc, char *argv[]) {
 
 void yyerror() {
   printf("syntax error\n");
+}
+
+
+Node *opr(int oper, int nops, ...) {
+  va_list ap;
+  Node *node;
+  if ((node = malloc(sizeof(Node) + (nops - 1) * sizeof(Node *))) == NULL)
+    yyerror("out of memory");
+
+  node->type = OPERATOR;
+  node->opr.opr = oper;
+  node->opr.nOperands = nops;
+
+  va_start(ap, nops);
+  for (int i = 0; i < nops; i++) {
+    node->opr.operands[i] = va_arg(ap, Node *);
+  }
+  va_end(ap);
+
+  printf("opr: %d\n", oper);
+
+  return node;
+}
+
+Node *id(char *name) {
+  Node *p;
+
+  if ((p = malloc(sizeof(Node))) == NULL) yyerror("out of memory");
+
+  p->type = ID;
+  p->identifier.name = name;
+
+  return p;
+}
+
+Node *con(int value) {
+  Node *p;
+
+  if ((p = malloc(sizeof(Node))) == NULL) yyerror("out of memory");
+
+  p->type = CONSTANT;
+  p->constant.value = value;
+
+  return p;
+}
+
+int createAST(Node *p) {
+  int rte, rtm;
+
+  graphInit();
+  drawNode(p, 0, 0, &rte, &rtm);
+  graphFinish();
+  return 0;
+}
+
+void drawNode(Node *p, int c, int l, int *ce, int *cm) {
+  int w, h;     /* node width and height */
+  char *s;      /* node text */
+  int cbar;     /* "real" start column of node (centred above subnodes) */
+  int k;        /* child number */
+  int che, chm; /* end column and mid of children */
+  int cs;       /* start column of children */
+  // TODO: Change this to a bigger limit probably
+  char word[20]; /* extended node text */
+
+  if (!p) return;
+  strcpy(word, "???"); /* should never appear */
+  s = word;
+
+  switch (p->type) {
+    case CONSTANT:
+      sprintf(word, "c(%d)", p->constant.value);
+      break;
+    case ID:
+      sprintf(word, "id(%s)", p->identifier.name);
+      break;
+    case OPERATOR:
+      switch (p->opr.opr) {
+        case WHILE:
+          s = "while";
+          break;
+        case ASSIGNMENT:
+          s = "[:=]";
+          break;
+      }
+      break;
+  }
+
+  graphBox(s, &w, &h);
+  cbar = c;
+  *ce = c + w;
+  *cm = c + w / 2;
+
+  /* node is leaf */
+  if (p->type == CONSTANT || p->type == ID || p->opr.nOperands == 0) {
+    graphDrawBox(s, cbar, l);
+    return;
+  }
+
+  /* node has children */
+  cs = c;
+  for (k = 0; k < p->opr.nOperands; k++) {
+    drawNode(p->opr.operands[k], cs, l + h + EPS, &che, &chm);
+    cs = che;
+  }
+
+  /* total node width */
+  if (w < che - c) {
+    cbar += (che - c - w) / 2;
+    *ce = che;
+    *cm = (c + che) / 2;
+  }
+
+  /* draw node */
+  graphDrawBox(s, cbar, l);
+
+  /* draw arrows (not optimal: children are drawn a second time) */
+  cs = c;
+  for (k = 0; k < p->opr.nOperands; k++) {
+    drawNode(p->opr.operands[k], cs, l + h + EPS, &che, &chm);
+    graphDrawArrow(*cm, l + h, chm, l + h + EPS - 1);
+    cs = che;
+  }
+}
+
+void graphTest(int l, int c) {
+  int ok;
+  ok = 1;
+  if (l < 0) ok = 0;
+  if (l >= LMAX) ok = 0;
+  if (c < 0) ok = 0;
+  if (c >= CMAX) ok = 0;
+  if (ok) return;
+  printf("\n+++error: l=%d, c=%d not in drawing rectangle 0, 0 ... %d, %d", l,
+         c, LMAX, CMAX);
+  exit(1);
+}
+
+void graphInit(void) {
+  int i, j;
+  for (i = 0; i < LMAX; i++) {
+    for (j = 0; j < CMAX; j++) {
+      graph[i][j] = ' ';
+    }
+  }
+}
+
+void graphFinish() {
+  int i, j;
+  for (i = 0; i < LMAX; i++) {
+    for (j = CMAX - 1; j > 0 && graph[i][j] == ' '; j--)
+      ;
+    graph[i][CMAX - 1] = 0;
+    if (j < CMAX - 1) graph[i][j + 1] = 0;
+    if (graph[i][j] == ' ') graph[i][j] = 0;
+  }
+  for (i = LMAX - 1; i > 0 && graph[i][0] == 0; i--)
+    ;
+  printf("\n\nGraph %d:\n", graphNumber++);
+  for (j = 0; j <= i; j++) printf("\n%s", graph[j]);
+  printf("\n");
+}
+
+void graphBox(char *s, int *w, int *h) {
+  *w = strlen(s) + DEL;
+  *h = 1;
+}
+
+void graphDrawBox(char *s, int c, int l) {
+  int i;
+  graphTest(l, c + strlen(s) - 1 + DEL);
+  for (i = 0; i < strlen(s); i++) {
+    graph[l][c + i + DEL] = s[i];
+  }
+}
+
+void graphDrawArrow(int c1, int l1, int c2, int l2) {
+  int m;
+  graphTest(l1, c1);
+  graphTest(l2, c2);
+  m = (l1 + l2) / 2;
+  while (l1 != m) {
+    graph[l1][c1] = '|';
+    if (l1 < l2)
+      l1++;
+    else
+      l1--;
+  }
+  while (c1 != c2) {
+    graph[l1][c1] = '-';
+    if (c1 < c2)
+      c1++;
+    else
+      c1--;
+  }
+  while (l1 != l2) {
+    graph[l1][c1] = '|';
+    if (l1 < l2)
+      l1++;
+    else
+      l1--;
+  }
+  graph[l1][c1] = '|';
 }

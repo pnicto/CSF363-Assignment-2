@@ -19,6 +19,32 @@ int graphNumber = 0;
   int yylex();
   void yyerror();
 
+  // graph related declarations
+  typedef enum { CONSTANT, ID, OPERATOR } NodeType;
+
+  typedef struct {
+    int value;
+  } ConstantNode;
+
+  typedef struct {
+    char* name;
+  } IdentifierNode;
+
+  typedef struct {
+    int opr;
+    int nOperands;
+    struct Node* operands[1];
+  } OperatorNode;
+
+  typedef struct Node {
+    NodeType type;
+    union {
+      ConstantNode constant;
+      IdentifierNode identifier;
+      OperatorNode opr;
+    };
+  } Node;
+
   enum Type {
     INTEGER_TYPE,
     REAL_TYPE,
@@ -111,32 +137,6 @@ int graphNumber = 0;
     int controlIndex;
     int oldControlAssignmentStatus;
   };
-
-// graph related declarations
-  typedef enum { CONSTANT, ID, OPERATOR } NodeType;
-
-  typedef struct {
-    int value;
-  } ConstantNode;
-
-  typedef struct {
-    char* name;
-  } IdentifierNode;
-
-  typedef struct {
-    int opr;
-    int nOperands;
-    struct Node* operands[1];
-  } OperatorNode;
-
-  typedef struct Node {
-    NodeType type;
-    union {
-      ConstantNode constant;
-      IdentifierNode identifier;
-      OperatorNode opr;
-    };
-  } Node;
 
   void graphInit(void);
   void graphFinish();

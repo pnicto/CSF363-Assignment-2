@@ -933,8 +933,6 @@ Node *opr(int oper, int nops, ...) {
   }
   va_end(ap);
 
-  printf("opr: %d\n", oper);
-
   return node;
 }
 

@@ -221,22 +221,22 @@ int graphNumber = 0;
 %type <additionalTerm> additional_terms
 %type <forControl> for_control
 
-%type <node> statement simple_statement assignment_statement
+%type <node> statement simple_statement assignment_statement block statement_part statement_sequence
 
 // Precedence rule for else shift-reduce conflict
 %right THEN ELSE
 
 %%
-program: program_heading block DOT { printf("valid input\n"); return 0; }
+program: program_heading block DOT { printf("valid input\n"); createAST($2); return 0; }
        ;
 program_heading: PROGRAM IDENTIFIER SEMICOLON { free($2); }
                ;
-block: declaration_part statement_part
+block: declaration_part statement_part { $$ = $2; }
      ;
 declaration_part:
                 | variable_declaration_part
                 ;
-statement_part: BEGINNING statement_sequence END
+statement_part: BEGINNING statement_sequence END { $$ = $2; }
               ;
 variable_declaration_part: VAR variable_declaration SEMICOLON more_variable_declarations
                          ;
@@ -313,9 +313,9 @@ subrange_type: constant DOTDOT constant { if (!($1.type == INTEGER_TYPE && $3.ty
                                           $$.minIndex = $1.integerValue;
                                           $$.maxIndex = $3.integerValue; }
              ;
-statement_sequence: statement SEMICOLON statement_sequence
-                  | statement { createAST($1); }
-                  |
+statement_sequence: statement SEMICOLON statement_sequence { $$ = opr(';', 2, $1, $3); }
+                  | statement { $$ = $1; }
+                  | { $$ = NULL; }
                   ;
 statement: simple_statement { $$ = $1; }
          | structured_statement

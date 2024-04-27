@@ -478,9 +478,9 @@ additional_terms: addition_operator term additional_terms { if (!$3.isNull) {
                                                             $$.additionOperator = $1; }
                 | { $$.isNull = 1; }
                 ;
-addition_operator: PLUS { return PLUS_OPERATOR; }
-                 | MINUS { return MINUS_OPERATOR; }
-                 | OR { return OR_SIGN; }
+addition_operator: PLUS { $$ = PLUS_OPERATOR; }
+                 | MINUS { $$ = MINUS_OPERATOR; }
+                 | OR { $$ = OR_SIGN; }
                  ;
 term: factor additional_factors { if (!$2.isNull) {
                                     switch ($2.multiplicationOperator) {

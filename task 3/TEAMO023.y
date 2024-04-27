@@ -379,7 +379,7 @@ actual_parameter: expression
                 ;
 structured_statement: compound_statement
                     | repetitive_statement
-                    | if_statement
+                    | if_statement { $$ = $1; }
                     ;
 compound_statement: BEGINNING statement_sequence END
                   ;
@@ -456,7 +456,8 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
 if_statement: IF expression THEN statement  { if ($2.valueType != BOOLEAN_TYPE) {
                                                 printf("Error: if statement condition must be boolean\n");
                                                 return 1;
-                                              } }
+                                              }
+                                              $$ = opr(IF, 2, $2.ast, $4);}
             | IF expression THEN statement ELSE statement { if ($2.valueType != BOOLEAN_TYPE) {
                                                             printf("Error: if statement condition must be boolean\n");
                                                             return 1;
@@ -466,7 +467,7 @@ expression: simple_expression relational_operator simple_expression { if (!(($1.
                                                                         printf("Error: can't apply relation operator on non-numeric value\n");
                                                                         return 1;
                                                                       }
-
+                                                                      $$.ast = opr($2, 2, $1.ast, $3.ast);
                                                                       $$.valueType = BOOLEAN_TYPE; }
           | simple_expression { $$.valueType = $1.valueType;
                                 $$.ast = $1.ast;
@@ -1049,6 +1050,18 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case ';':
           s = "[;]";
+          break;
+        case READ:
+          s = "[read]";
+          break;
+        case IF:
+          s = "[if]";
+          break;
+        case '<':
+          s = "[<]";
+          break;
+        case '>':
+          s = "[>]";
           break;
       }
       break;

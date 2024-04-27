@@ -221,7 +221,7 @@ int graphNumber = 0;
 %type <additionalTerm> additional_terms
 %type <forControl> for_control
 
-%type <node> statement simple_statement assignment_statement block statement_part statement_sequence
+%type <node> statement simple_statement assignment_statement block statement_part statement_sequence procedure_statement structured_statement if_statement
 
 // Precedence rule for else shift-reduce conflict
 %right THEN ELSE
@@ -321,7 +321,7 @@ statement: simple_statement { $$ = $1; }
          | structured_statement
          ;
 simple_statement: assignment_statement { $$ = $1; }
-                | procedure_statement
+                | procedure_statement { $$ = $1; }
                 ;
 assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == ARRAY_TYPE && !$1.isIndexed) {
                                                           printf("Error: can't assign to array variable %s directly\n", symbolTable.variables[$1.symbolTableIndex].identifier);
@@ -365,6 +365,7 @@ procedure_statement: READ LPAREN variable RPAREN  { if (symbolTable.variables[$3
                                                       printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$3.symbolTableIndex].identifier);
                                                       return 1;
                                                     }
+                                                    $$ = opr(READ, 1, id(symbolTable.variables[$3.symbolTableIndex].identifier));
                                                     symbolTable.variables[$3.symbolTableIndex].valueHasBeenAssigned = 1; }
                    | WRITE actual_parameter_list
                    ;

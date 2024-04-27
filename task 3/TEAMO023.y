@@ -119,6 +119,7 @@ int graphNumber = 0;
   struct VariableInfo {
     int symbolTableIndex;
     int isIndexed;
+    Node* ast;
   };
 
   struct AdditionalFactor {
@@ -170,6 +171,7 @@ int graphNumber = 0;
   struct AdditionalFactor additionalFactor;
   struct AdditionalTerm additionalTerm;
   struct ForControl forControl;
+  Node* node;
 }
 
 // program tokens
@@ -211,6 +213,8 @@ int graphNumber = 0;
 %type <additionalFactor> additional_factors
 %type <additionalTerm> additional_terms
 %type <forControl> for_control
+
+%type <node> statement simple_statement assignment_statement
 
 // Precedence rule for else shift-reduce conflict
 %right THEN ELSE
@@ -303,13 +307,13 @@ subrange_type: constant DOTDOT constant { if (!($1.type == INTEGER_TYPE && $3.ty
                                           $$.maxIndex = $3.integerValue; }
              ;
 statement_sequence: statement SEMICOLON statement_sequence
-                  | statement
+                  | statement { createAST($1); }
                   |
                   ;
-statement: simple_statement
+statement: simple_statement { $$ = $1; }
          | structured_statement
          ;
-simple_statement: assignment_statement
+simple_statement: assignment_statement { $$ = $1; }
                 | procedure_statement
                 ;
 assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == ARRAY_TYPE && !$1.isIndexed) {
@@ -332,7 +336,10 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                           printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                           return 1;
                                                         }
-                                                        symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1; }
+                                                        symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1;
+
+                                                        $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3);
+                                                      }
                     | variable ASSIGNMENT char  { free($3);
                                                   if (!$1.isIndexed) {
                                                     if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == CHAR_TYPE) {

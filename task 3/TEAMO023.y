@@ -126,12 +126,14 @@ int graphNumber = 0;
     enum MultiplicationOperator multiplicationOperator;
     int isNull;
     enum Type type;
+    Node* ast;
   };
 
   struct AdditionalTerm {
     enum AdditionOperator additionOperator;
     int isNull;
     enum Type type;
+    Node *ast;
   };
 
   struct ForControl {
@@ -343,7 +345,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                         }
                                                         symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1;
 
-                                                        $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3.valueType);
+                                                        $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3.ast);
                                                       }
                     | variable ASSIGNMENT char  { free($3);
                                                   if (!$1.isIndexed) {
@@ -465,13 +467,17 @@ expression: simple_expression relational_operator simple_expression { if (!(($1.
                                                                       }
 
                                                                       $$.valueType = BOOLEAN_TYPE; }
-          | simple_expression { $$.valueType = $1.valueType; }
+          | simple_expression { $$.valueType = $1.valueType;
+                                printf("Here in simple_expression\n");
+                                $$.ast = $1.ast;
+                              }
           ;
 simple_expression: additional_terms term  { if (!$1.isNull) {
                                               switch ($1.additionOperator) {
                                                 case OR_SIGN:
                                                   if ($2.valueType == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                     $$.valueType = BOOLEAN_TYPE;
+                                                    $$.ast = opr(OR_SIGN, 2, $2.ast, $1.ast);
                                                   } else {
                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
                                                     return 1;
@@ -484,6 +490,8 @@ simple_expression: additional_terms term  { if (!$1.isNull) {
                                                     return 1;
                                                   } else {
                                                     $$.valueType = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                    printf("Here in PLUS_OPERATOR\n");
+                                                    $$.ast = opr(PLUS_OPERATOR, 2, $2.ast, $1.ast);
                                                   }
                                                   break;
 
@@ -493,11 +501,13 @@ simple_expression: additional_terms term  { if (!$1.isNull) {
                                                     return 1;
                                                   } else {
                                                     $$.valueType = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                    $$.ast = opr(MINUS_OPERATOR, 2, $2.ast, $1.ast);
                                                   }
                                                   break;
                                               }
                                             } else {
                                                 $$.valueType = $2.valueType;
+                                                $$.ast = $2.ast;
                                             } }
                  ;
 additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
@@ -505,6 +515,7 @@ additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
                                                                 case OR_SIGN:
                                                                   if ($2.valueType == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                     $$.type = BOOLEAN_TYPE;
+                                                                    $$.ast = opr(OR_SIGN, 2, $2.ast, $1.ast);
                                                                   } else {
                                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
                                                                     return 1;
@@ -517,6 +528,7 @@ additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
                                                                     return 1;
                                                                   } else {
                                                                     $$.type = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                    $$.ast = opr(PLUS_OPERATOR, 2, $2.ast, $1.ast);
                                                                   }
                                                                   break;
 
@@ -526,11 +538,13 @@ additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
                                                                     return 1;
                                                                   } else {
                                                                     $$.type = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                    $$.ast = opr(MINUS_OPERATOR, 2, $2.ast, $1.ast);
                                                                   }
                                                                   break;
                                                               }
                                                             } else {
                                                                 $$.type = $2.valueType;
+                                                                $$.ast = $2.ast;
                                                             }
 
                                                             $$.isNull = 0;
@@ -546,6 +560,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                       case AND_SIGN:
                                         if ($2.valueType == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                           $$.valueType = BOOLEAN_TYPE;
+                                          $$.ast = opr(AND_SIGN, 2, $2.ast, $1.ast);
                                         } else {
                                           printf("Error: can't apply boolean operator on non-boolean value\n");
                                           return 1;
@@ -558,6 +573,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                           return 1;
                                         } else {
                                           $$.valueType = INTEGER_TYPE;
+                                          $$.ast = opr(REMAINDER_SIGN, 2, $2.ast, $1.ast);
                                         }
                                         break;
 
@@ -567,6 +583,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                           return 1;
                                         } else {
                                           $$.valueType = REAL_TYPE;
+                                          $$.ast = opr(DIVIDE_SIGN, 2, $2.ast, $1.ast);
                                         }
                                         break;
 
@@ -576,11 +593,13 @@ term: additional_factors factor { if (!$1.isNull) {
                                           return 1;
                                         } else {
                                           $$.valueType = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                          $$.ast = opr(MULTIPLY_SIGN, 2, $2.ast, $1.ast);
                                         }
                                         break;
                                     }
                                   } else {
                                       $$.valueType = $2.valueType;
+                                      $$.ast = $2.ast;
                                   } }
     | additional_factors sign factor  { if (!($3.valueType == INTEGER_TYPE || $3.valueType == REAL_TYPE)) {
                                           printf("Error: can't apply unary arithmetic operator on non-numeric value\n");
@@ -599,6 +618,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                                 return 1;
                                               } else {
                                                 $$.valueType = INTEGER_TYPE;
+                                                $$.ast = opr(REMAINDER_SIGN, 2, $1.ast, $3.ast);
                                               }
                                               break;
 
@@ -608,6 +628,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                                 return 1;
                                               } else {
                                                 $$.valueType = REAL_TYPE;
+                                                $$.ast = opr(DIVIDE_SIGN, 2, $1.ast, $3.ast);
                                               }
                                               break;
 
@@ -617,11 +638,13 @@ term: additional_factors factor { if (!$1.isNull) {
                                                 return 1;
                                               } else {
                                                 $$.valueType = ($3.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                $$.ast = opr(MULTIPLY_SIGN, 2, $1.ast, $3.ast);
                                               }
                                               break;
                                           }
                                         } else {
                                           $$.valueType = $3.valueType;
+                                          $$.ast = $3.ast;
                                         } }
     ;
 additional_factors: additional_factors factor multiplication_operator { if (!$1.isNull) {
@@ -629,6 +652,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                             case AND_SIGN:
                                                                               if ($2.valueType == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                                 $$.type = BOOLEAN_TYPE;
+                                                                                $$.ast = opr(AND_SIGN, 2, $2.ast, $1.ast);
                                                                               } else {
                                                                                 printf("Error: can't apply boolean operator on non-boolean value\n");
                                                                                 return 1;
@@ -641,6 +665,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                 return 1;
                                                                               } else {
                                                                                 $$.type = INTEGER_TYPE;
+                                                                                $$.ast = opr(REMAINDER_SIGN, 2, $2.ast, $1.ast);
                                                                               }
                                                                               break;
 
@@ -650,6 +675,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                 return 1;
                                                                               } else {
                                                                                 $$.type = REAL_TYPE;
+                                                                                $$.ast = opr(DIVIDE_SIGN, 2, $2.ast, $1.ast);
                                                                               }
                                                                               break;
 
@@ -659,11 +685,13 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                 return 1;
                                                                               } else {
                                                                                 $$.type = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                                $$.ast = opr(MULTIPLY_SIGN, 2, $2.ast, $1.ast);
                                                                               }
                                                                               break;
                                                                           }
                                                                         } else {
                                                                             $$.type = $2.valueType;
+                                                                            $$.ast = $2.ast;
                                                                         }
 
                                                                         $$.isNull = 0;
@@ -686,6 +714,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                       return 1;
                                                                                     } else {
                                                                                       $$.type = INTEGER_TYPE;
+                                                                                      $$.ast = opr(REMAINDER_SIGN, 2, $1.ast, $3.ast);
                                                                                     }
                                                                                     break;
 
@@ -695,6 +724,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                       return 1;
                                                                                     } else {
                                                                                       $$.type = REAL_TYPE;
+                                                                                      $$.ast = opr(DIVIDE_SIGN, 2, $1.ast, $3.ast);
                                                                                     }
                                                                                     break;
 
@@ -704,6 +734,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                       return 1;
                                                                                     } else {
                                                                                       $$.type = ($3.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                                      $$.ast = opr(MULTIPLY_SIGN, 2, $1.ast, $3.ast);
                                                                                     }
                                                                                     break;
                                                                                 }
@@ -739,13 +770,16 @@ factor: variable  { if(symbolTable.variables[$1.symbolTableIndex].typeInfo.type 
 
                     if (!$1.isIndexed) {
                       $$.valueType = symbolTable.variables[$1.symbolTableIndex].typeInfo.type;
+                      $$.ast = id(symbolTable.variables[$1.symbolTableIndex].identifier);
                     } else {
                       $$.valueType = symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType;
                     } }
       | number  { if ($1.type == INTEGER_TYPE) {
                     $$.valueType = INTEGER_TYPE;
+                    $$.ast = con($1.integerValue);
                   } else {
                     $$.valueType = REAL_TYPE;
+                    $$.ast = con($1.realValue);
                   } }
       | LPAREN expression RPAREN { $$.valueType = $2.valueType; }
       | NOT factor  { if ($2.valueType != BOOLEAN_TYPE) {
@@ -995,6 +1029,15 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case ASSIGNMENT:
           s = "[:=]";
+          break;
+        case OR_SIGN:
+          s = "[or]";
+          break;
+        case PLUS_OPERATOR:
+          s = "[+]";
+          break;
+        case MINUS_OPERATOR:
+          s = "[-]";
           break;
       }
       break;

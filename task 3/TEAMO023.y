@@ -468,7 +468,6 @@ expression: simple_expression relational_operator simple_expression { if (!(($1.
 
                                                                       $$.valueType = BOOLEAN_TYPE; }
           | simple_expression { $$.valueType = $1.valueType;
-                                printf("Here in simple_expression\n");
                                 $$.ast = $1.ast;
                               }
           ;
@@ -490,7 +489,6 @@ simple_expression: additional_terms term  { if (!$1.isNull) {
                                                     return 1;
                                                   } else {
                                                     $$.valueType = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
-                                                    printf("Here in PLUS_OPERATOR\n");
                                                     $$.ast = opr(PLUS_OPERATOR, 2, $2.ast, $1.ast);
                                                   }
                                                   break;

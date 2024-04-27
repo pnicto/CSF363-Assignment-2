@@ -84,7 +84,6 @@ struct SymbolTable symbolTable;
 
   struct VariableInfo {
     int symbolTableIndex;
-    // The remaining 2 attributes are only used in indexed variables
     int isIndexed;
   };
 
@@ -284,6 +283,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                         }
                                                         if (symbolTable.variables[$1.symbolTableIndex].assignmentIsAllowed == 0) {
                                                           printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
+                                                          return 1;
                                                         }
                                                         symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1; }
                     | variable ASSIGNMENT char  { free($3);
@@ -302,6 +302,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                     ;
 procedure_statement: READ LPAREN variable RPAREN  { if (symbolTable.variables[$3.symbolTableIndex].assignmentIsAllowed == 0) {
                                                       printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$3.symbolTableIndex].identifier);
+                                                      return 1;
                                                     }
                                                     symbolTable.variables[$3.symbolTableIndex].valueHasBeenAssigned = 1; }
                    | WRITE actual_parameter_list

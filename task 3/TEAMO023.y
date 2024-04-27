@@ -573,7 +573,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                           return 1;
                                         } else {
                                           $$.valueType = INTEGER_TYPE;
-                                          $$.ast = opr(REMAINDER_SIGN, 2, $2.ast, $1.ast);
+                                          $$.ast = opr('%', 2, $2.ast, $1.ast);
                                         }
                                         break;
 
@@ -583,7 +583,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                           return 1;
                                         } else {
                                           $$.valueType = REAL_TYPE;
-                                          $$.ast = opr(DIVIDE_SIGN, 2, $2.ast, $1.ast);
+                                          $$.ast = opr('/', 2, $2.ast, $1.ast);
                                         }
                                         break;
 
@@ -593,7 +593,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                           return 1;
                                         } else {
                                           $$.valueType = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
-                                          $$.ast = opr(MULTIPLY_SIGN, 2, $2.ast, $1.ast);
+                                          $$.ast = opr('*', 2, $2.ast, $1.ast);
                                         }
                                         break;
                                     }
@@ -1038,6 +1038,18 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case MINUS_OPERATOR:
           s = "[-]";
+          break;
+        case '*':
+          s = "[*]";
+          break;
+        case '/':
+          s = "[/]";
+          break;
+        case '%':
+          s = "[%]";
+          break;
+        case ';':
+          s = "[;]";
           break;
       }
       break;

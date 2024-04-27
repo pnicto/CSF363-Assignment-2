@@ -139,6 +139,11 @@ int graphNumber = 0;
     int oldControlAssignmentStatus;
   };
 
+  struct Expression {
+    enum Type valueType;
+    Node *ast;
+  };
+
   void graphInit(void);
   void graphFinish();
   void graphBox(char *s, int *w, int *h);
@@ -164,7 +169,7 @@ int graphNumber = 0;
   struct Subrange subrange;
   char* stringValue;
   struct VariableInfo variableInfo;
-  enum Type valueType;
+  struct Expression expressionInfo;
   enum MultiplicationOperator multiplicationOperator;
   enum RelationalOperator relationalOperator;
   enum AdditionOperator additionOperator;
@@ -206,7 +211,7 @@ int graphNumber = 0;
 %type <subrange> subrange_type
 %type <stringValue> string_character additional_string_characters char string
 %type <variableInfo> variable indexed_variable
-%type <valueType> expression simple_expression term factor
+%type <expressionInfo> expression simple_expression term factor
 %type <multiplicationOperator> multiplication_operator
 %type <relationalOperator> relational_operator
 %type <additionOperator> addition_operator
@@ -322,12 +327,12 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                         }
 
                                                         if (!$1.isIndexed) {
-                                                          if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.type == $3 || (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == REAL_TYPE && $3 == INTEGER_TYPE))) {
+                                                          if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.type == $3.valueType || (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == REAL_TYPE && $3.valueType == INTEGER_TYPE))) {
                                                             printf("Error: can't assign value of incompatible type to variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                             return 1;
                                                           }
                                                         } else {
-                                                          if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == $3 || (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == REAL_TYPE && $3 == INTEGER_TYPE))) {
+                                                          if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == $3.valueType || (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == REAL_TYPE && $3.valueType == INTEGER_TYPE))) {
                                                             printf("Error: can't assign value of incompatible type to index variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                             return 1;
                                                           }
@@ -338,7 +343,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                         }
                                                         symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1;
 
-                                                        $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3);
+                                                        $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3.valueType);
                                                       }
                     | variable ASSIGNMENT char  { free($3);
                                                   if (!$1.isIndexed) {
@@ -378,7 +383,7 @@ compound_statement: BEGINNING statement_sequence END
 repetitive_statement: while_statement
                     | for_statement
                     ;
-while_statement: WHILE expression DO statement  { if ($2 != BOOLEAN_TYPE) {
+while_statement: WHILE expression DO statement  { if ($2.valueType != BOOLEAN_TYPE) {
                                                     printf("Error: control expression of while loop must be boolean\n");
                                                     return 1;
                                                   } }
@@ -406,7 +411,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                     return 1;
                                                                   }
 
-                                                                  if ($4 != INTEGER_TYPE || $6 != INTEGER_TYPE) {
+                                                                  if ($4.valueType != INTEGER_TYPE || $6.valueType != INTEGER_TYPE) {
                                                                     printf("Error: can't use non integral expression for for-loop control\n");
                                                                     return 1;
                                                                   }
@@ -435,7 +440,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                         return 1;
                                                                       }
 
-                                                                      if ($4 != INTEGER_TYPE || $6 != INTEGER_TYPE) {
+                                                                      if ($4.valueType != INTEGER_TYPE || $6.valueType != INTEGER_TYPE) {
                                                                         printf("Error: can't use non integral expression for for-loop control\n");
                                                                         return 1;
                                                                       }
@@ -445,28 +450,28 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                       symbolTable.variables[variableIndex].valueHasBeenAssigned = 1;
                                                                       symbolTable.variables[variableIndex].assignmentIsAllowed = 0; }
            ;
-if_statement: IF expression THEN statement  { if ($2 != BOOLEAN_TYPE) {
+if_statement: IF expression THEN statement  { if ($2.valueType != BOOLEAN_TYPE) {
                                                 printf("Error: if statement condition must be boolean\n");
                                                 return 1;
                                               } }
-            | IF expression THEN statement ELSE statement { if ($2 != BOOLEAN_TYPE) {
+            | IF expression THEN statement ELSE statement { if ($2.valueType != BOOLEAN_TYPE) {
                                                             printf("Error: if statement condition must be boolean\n");
                                                             return 1;
                                                           } }
             ;
-expression: simple_expression relational_operator simple_expression { if (!(($1 == INTEGER_TYPE || $1 == REAL_TYPE) && ($3 == INTEGER_TYPE || $3 == REAL_TYPE))) {
+expression: simple_expression relational_operator simple_expression { if (!(($1.valueType == INTEGER_TYPE || $1.valueType == REAL_TYPE) && ($3.valueType == INTEGER_TYPE || $3.valueType == REAL_TYPE))) {
                                                                         printf("Error: can't apply relation operator on non-numeric value\n");
                                                                         return 1;
                                                                       }
 
-                                                                      $$ = BOOLEAN_TYPE; }
-          | simple_expression { $$ = $1; }
+                                                                      $$.valueType = BOOLEAN_TYPE; }
+          | simple_expression { $$.valueType = $1.valueType; }
           ;
 simple_expression: additional_terms term  { if (!$1.isNull) {
                                               switch ($1.additionOperator) {
                                                 case OR_SIGN:
-                                                  if ($2 == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
-                                                    $$ = BOOLEAN_TYPE;
+                                                  if ($2.valueType == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
+                                                    $$.valueType = BOOLEAN_TYPE;
                                                   } else {
                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
                                                     return 1;
@@ -474,31 +479,31 @@ simple_expression: additional_terms term  { if (!$1.isNull) {
                                                   break;
 
                                                 case PLUS_OPERATOR:
-                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.valueType == INTEGER_TYPE || $2.valueType == REAL_TYPE))) {
                                                     printf("Error: can't apply addition operator on non-numeric value\n");
                                                     return 1;
                                                   } else {
-                                                    $$ = ($2 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                    $$.valueType = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                                   }
                                                   break;
 
                                                 case MINUS_OPERATOR:
-                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.valueType == INTEGER_TYPE || $2.valueType == REAL_TYPE))) {
                                                     printf("Error: can't apply subtraction operator on non-numeric value\n");
                                                     return 1;
                                                   } else {
-                                                    $$ = ($2 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                    $$.valueType = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                                   }
                                                   break;
                                               }
                                             } else {
-                                                $$ = $2;
+                                                $$.valueType = $2.valueType;
                                             } }
                  ;
 additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
                                                               switch ($1.additionOperator) {
                                                                 case OR_SIGN:
-                                                                  if ($2 == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
+                                                                  if ($2.valueType == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                     $$.type = BOOLEAN_TYPE;
                                                                   } else {
                                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
@@ -507,25 +512,25 @@ additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
                                                                   break;
 
                                                                 case PLUS_OPERATOR:
-                                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.valueType == INTEGER_TYPE || $2.valueType == REAL_TYPE))) {
                                                                     printf("Error: can't apply addition operator on non-numeric value\n");
                                                                     return 1;
                                                                   } else {
-                                                                    $$.type = ($2 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                    $$.type = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                                                   }
                                                                   break;
 
                                                                 case MINUS_OPERATOR:
-                                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.valueType == INTEGER_TYPE || $2.valueType == REAL_TYPE))) {
                                                                     printf("Error: can't apply subtraction operator on non-numeric value\n");
                                                                     return 1;
                                                                   } else {
-                                                                    $$.type = ($2 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                    $$.type = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                                                   }
                                                                   break;
                                                               }
                                                             } else {
-                                                                $$.type = $2;
+                                                                $$.type = $2.valueType;
                                                             }
 
                                                             $$.isNull = 0;
@@ -539,8 +544,8 @@ addition_operator: PLUS { $$ = PLUS_OPERATOR; }
 term: additional_factors factor { if (!$1.isNull) {
                                     switch ($1.multiplicationOperator) {
                                       case AND_SIGN:
-                                        if ($2 == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
-                                          $$ = BOOLEAN_TYPE;
+                                        if ($2.valueType == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
+                                          $$.valueType = BOOLEAN_TYPE;
                                         } else {
                                           printf("Error: can't apply boolean operator on non-boolean value\n");
                                           return 1;
@@ -548,36 +553,36 @@ term: additional_factors factor { if (!$1.isNull) {
                                         break;
 
                                       case REMAINDER_SIGN:
-                                        if (!($2 == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
+                                        if (!($2.valueType == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                           printf("Error: can't apply modulo operator on non-integer value\n");
                                           return 1;
                                         } else {
-                                          $$ = INTEGER_TYPE;
+                                          $$.valueType = INTEGER_TYPE;
                                         }
                                         break;
 
                                       case DIVIDE_SIGN:
-                                        if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                        if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.valueType == INTEGER_TYPE || $2.valueType == REAL_TYPE))) {
                                           printf("Error: can't apply division operator on non-numeric value\n");
                                           return 1;
                                         } else {
-                                          $$ = REAL_TYPE;
+                                          $$.valueType = REAL_TYPE;
                                         }
                                         break;
 
                                       case MULTIPLY_SIGN:
-                                        if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                        if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.valueType == INTEGER_TYPE || $2.valueType == REAL_TYPE))) {
                                           printf("Error: can't apply multiplication operator on non-numeric value\n");
                                           return 1;
                                         } else {
-                                          $$ = ($2 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                          $$.valueType = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                         }
                                         break;
                                     }
                                   } else {
-                                      $$ = $2;
+                                      $$.valueType = $2.valueType;
                                   } }
-    | additional_factors sign factor  { if (!($3 == INTEGER_TYPE || $3 == REAL_TYPE)) {
+    | additional_factors sign factor  { if (!($3.valueType == INTEGER_TYPE || $3.valueType == REAL_TYPE)) {
                                           printf("Error: can't apply unary arithmetic operator on non-numeric value\n");
                                           return 1;
                                         }
@@ -589,11 +594,11 @@ term: additional_factors factor { if (!$1.isNull) {
                                               break;
 
                                             case REMAINDER_SIGN:
-                                              if (!($3 == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
+                                              if (!($3.valueType == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                 printf("Error: can't apply modulo operator on non-integer value\n");
                                                 return 1;
                                               } else {
-                                                $$ = INTEGER_TYPE;
+                                                $$.valueType = INTEGER_TYPE;
                                               }
                                               break;
 
@@ -602,7 +607,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                                 printf("Error: can't apply division operator on non-numeric value\n");
                                                 return 1;
                                               } else {
-                                                $$ = REAL_TYPE;
+                                                $$.valueType = REAL_TYPE;
                                               }
                                               break;
 
@@ -611,18 +616,18 @@ term: additional_factors factor { if (!$1.isNull) {
                                                 printf("Error: can't apply multiplication operator on non-numeric value\n");
                                                 return 1;
                                               } else {
-                                                $$ = ($3 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                $$.valueType = ($3.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                               }
                                               break;
                                           }
                                         } else {
-                                          $$ = $3;
+                                          $$.valueType = $3.valueType;
                                         } }
     ;
 additional_factors: additional_factors factor multiplication_operator { if (!$1.isNull) {
                                                                           switch ($1.multiplicationOperator) {
                                                                             case AND_SIGN:
-                                                                              if ($2 == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
+                                                                              if ($2.valueType == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                                 $$.type = BOOLEAN_TYPE;
                                                                               } else {
                                                                                 printf("Error: can't apply boolean operator on non-boolean value\n");
@@ -631,7 +636,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                               break;
 
                                                                             case REMAINDER_SIGN:
-                                                                              if (!($2 == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
+                                                                              if (!($2.valueType == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                                                 printf("Error: can't apply modulo operator on non-integer value\n");
                                                                                 return 1;
                                                                               } else {
@@ -640,7 +645,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                               break;
 
                                                                             case DIVIDE_SIGN:
-                                                                              if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                                              if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.valueType == INTEGER_TYPE || $2.valueType == REAL_TYPE))) {
                                                                                 printf("Error: can't apply division operator on non-numeric value\n");
                                                                                 return 1;
                                                                               } else {
@@ -649,21 +654,21 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                               break;
 
                                                                             case MULTIPLY_SIGN:
-                                                                              if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                                              if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.valueType == INTEGER_TYPE || $2.valueType == REAL_TYPE))) {
                                                                                 printf("Error: can't apply multiplication operator on non-numeric value\n");
                                                                                 return 1;
                                                                               } else {
-                                                                                $$.type = ($2 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                                $$.type = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                                                               }
                                                                               break;
                                                                           }
                                                                         } else {
-                                                                            $$.type = $2;
+                                                                            $$.type = $2.valueType;
                                                                         }
 
                                                                         $$.isNull = 0;
                                                                         $$.multiplicationOperator = $3; }
-                  | additional_factors sign factor multiplication_operator  { if (!($3 == INTEGER_TYPE || $3 == REAL_TYPE)) {
+                  | additional_factors sign factor multiplication_operator  { if (!($3.valueType == INTEGER_TYPE || $3.valueType == REAL_TYPE)) {
                                                                                 printf("Error: can't apply unary arithmetic operator on non-numeric value\n");
                                                                                 return 1;
                                                                               }
@@ -676,7 +681,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                     break;
 
                                                                                   case REMAINDER_SIGN:
-                                                                                    if (!($3 == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
+                                                                                    if (!($3.valueType == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                                                       printf("Error: can't apply modulo operator on non-integer value\n");
                                                                                       return 1;
                                                                                     } else {
@@ -698,12 +703,12 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                       printf("Error: can't apply multiplication operator on non-numeric value\n");
                                                                                       return 1;
                                                                                     } else {
-                                                                                      $$.type = ($3 == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                                      $$.type = ($3.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
                                                                                     }
                                                                                     break;
                                                                                 }
                                                                               } else {
-                                                                                $$.type = $3;
+                                                                                $$.type = $3.valueType;
                                                                               }
 
                                                                               $$.isNull = 0;
@@ -733,22 +738,22 @@ factor: variable  { if(symbolTable.variables[$1.symbolTableIndex].typeInfo.type 
                     }
 
                     if (!$1.isIndexed) {
-                      $$ = symbolTable.variables[$1.symbolTableIndex].typeInfo.type;
+                      $$.valueType = symbolTable.variables[$1.symbolTableIndex].typeInfo.type;
                     } else {
-                      $$ = symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType;
+                      $$.valueType = symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType;
                     } }
       | number  { if ($1.type == INTEGER_TYPE) {
-                    $$ = INTEGER_TYPE;
+                    $$.valueType = INTEGER_TYPE;
                   } else {
-                    $$ = REAL_TYPE;
+                    $$.valueType = REAL_TYPE;
                   } }
-      | LPAREN expression RPAREN { $$ = $2; }
-      | NOT factor  { if ($2 != BOOLEAN_TYPE) {
+      | LPAREN expression RPAREN { $$.valueType = $2.valueType; }
+      | NOT factor  { if ($2.valueType != BOOLEAN_TYPE) {
                         printf("Error: can't use boolean operator NOT on non boolean value\n");
                         return 1;
                       }
 
-                      $$ = BOOLEAN_TYPE; }
+                      $$.valueType = BOOLEAN_TYPE; }
       ;
 variable: IDENTIFIER  { int variableIndex = -1;
                         for (int i = 0; i < symbolTable.size; i++) {
@@ -774,7 +779,7 @@ indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN { if (symbolTabl
                                                                     return 1;
                                                                   }
 
-                                                                  if ($3 != INTEGER_TYPE) {
+                                                                  if ($3.valueType != INTEGER_TYPE) {
                                                                     printf("Error: can't access non-integer index of array variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                                     return 1;
                                                                   }

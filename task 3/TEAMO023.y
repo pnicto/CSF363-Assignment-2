@@ -817,13 +817,15 @@ factor: variable  { if(symbolTable.variables[$1.symbolTableIndex].typeInfo.type 
                     $$.valueType = REAL_TYPE;
                     $$.ast = con((void*)(&($1.realValue)), REAL_TYPE);
                   } }
-      | LPAREN expression RPAREN { $$.valueType = $2.valueType; }
+      | LPAREN expression RPAREN { $$.valueType = $2.valueType;
+                                  $$.ast = $2.ast;}
       | NOT factor  { if ($2.valueType != BOOLEAN_TYPE) {
                         printf("Error: can't use boolean operator NOT on non boolean value\n");
                         return 1;
                       }
-
-                      $$.valueType = BOOLEAN_TYPE; }
+                      $$.ast = opr(NOT, 1, $2.ast);
+                      $$.valueType = BOOLEAN_TYPE;
+                      }
       ;
 variable: IDENTIFIER  { int variableIndex = -1;
                         for (int i = 0; i < symbolTable.size; i++) {
@@ -1158,6 +1160,9 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case WRITE:
           s = "write";
+          break;
+        case NOT:
+          s = "not";
           break;
       }
       break;

@@ -3,7 +3,32 @@
 #include <string.h>
 #include <stdlib.h>
 
+struct Quadruple {
+  char operator[5];
+  char operand1[50];
+  char operand2[50];
+  char result[50];
+};
+
+int quadrupleSize = 0;
+int tempCount = 0;
 struct SymbolTable symbolTable;
+struct Quadruple quadruple[1000];
+
+void displayQuadruple() {
+  for (int index = 0; index < quadrupleSize; index++) {
+    printf ("%s = %s %s %s\n", quadruple[index].result, quadruple[index].operand1, quadruple[index].operator, quadruple[index].operand2);
+  }
+}
+
+void addQuadruple(char op1[], char op[], char op2[], char result[])
+{
+  strcpy(quadruple[quadrupleSize].operator, op);
+  strcpy(quadruple[quadrupleSize].operand1, op1);
+  strcpy(quadruple[quadrupleSize].operand2, op2);
+  strcpy(quadruple[quadrupleSize].result, result);
+  quadrupleSize++;
+}
 %}
 
 %code requires {
@@ -84,25 +109,32 @@ struct SymbolTable symbolTable;
 
   struct VariableInfo {
     int symbolTableIndex;
-    // The remaining 2 attributes are only used in indexed variables
     int isIndexed;
+    char indexExpressionTemp[50];
   };
 
   struct AdditionalFactor {
     enum MultiplicationOperator multiplicationOperator;
     int isNull;
     enum Type type;
+    char temp[50];
   };
 
   struct AdditionalTerm {
     enum AdditionOperator additionOperator;
     int isNull;
     enum Type type;
+    char temp[50];
   };
 
   struct ForControl {
     int controlIndex;
     int oldControlAssignmentStatus;
+  };
+
+  struct Expression {
+    enum Type type;
+    char temp[50];
   };
 }
 
@@ -117,7 +149,7 @@ struct SymbolTable symbolTable;
   struct Subrange subrange;
   char* stringValue;
   struct VariableInfo variableInfo;
-  enum Type valueType;
+  struct Expression expressionType;
   enum MultiplicationOperator multiplicationOperator;
   enum RelationalOperator relationalOperator;
   enum AdditionOperator additionOperator;
@@ -158,7 +190,7 @@ struct SymbolTable symbolTable;
 %type <subrange> subrange_type
 %type <stringValue> string_character additional_string_characters char string
 %type <variableInfo> variable indexed_variable
-%type <valueType> expression simple_expression term factor
+%type <expressionType> expression simple_expression term factor
 %type <multiplicationOperator> multiplication_operator
 %type <relationalOperator> relational_operator
 %type <additionOperator> addition_operator
@@ -170,7 +202,7 @@ struct SymbolTable symbolTable;
 %right THEN ELSE
 
 %%
-program: program_heading block DOT { printf("valid input\n"); return 0; }
+program: program_heading block DOT { printf("Quad has %d rows\n", quadrupleSize); displayQuadruple(); return 0; }
        ;
 program_heading: PROGRAM IDENTIFIER SEMICOLON { free($2); }
                ;
@@ -272,29 +304,30 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                         }
                                                         
                                                         if (!$1.isIndexed) {
-                                                          if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.type == $3 || (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == REAL_TYPE && $3 == INTEGER_TYPE))) {
+                                                          if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.type == $3.type || (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == REAL_TYPE && $3.type == INTEGER_TYPE))) {
                                                             printf("Error: can't assign value of incompatible type to variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                             return 1;
                                                           }
                                                         } else {
-                                                          if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == $3 || (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == REAL_TYPE && $3 == INTEGER_TYPE))) {
+                                                          if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == $3.type || (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == REAL_TYPE && $3.type == INTEGER_TYPE))) {
                                                             printf("Error: can't assign value of incompatible type to index variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                             return 1;
                                                           }
                                                         }
                                                         if (symbolTable.variables[$1.symbolTableIndex].assignmentIsAllowed == 0) {
                                                           printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
+                                                          return 1;
                                                         }
                                                         symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1; }
                     | variable ASSIGNMENT char  { free($3);
                                                   if (!$1.isIndexed) {
-                                                    if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == CHAR_TYPE) {
-                                                      printf("Error: can't assign char literal to no char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
+                                                    if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type != CHAR_TYPE) {
+                                                      printf("Error: can't assign char literal to non char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                       return 1;
                                                     }
                                                   } else {
-                                                    if (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == CHAR_TYPE) {
-                                                      printf("Error: can't assign char literal to no char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
+                                                    if (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType != CHAR_TYPE) {
+                                                      printf("Error: can't assign char literal to non char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                       return 1;
                                                     }
                                                   }
@@ -302,6 +335,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                     ;
 procedure_statement: READ LPAREN variable RPAREN  { if (symbolTable.variables[$3.symbolTableIndex].assignmentIsAllowed == 0) {
                                                       printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$3.symbolTableIndex].identifier);
+                                                      return 1;
                                                     }
                                                     symbolTable.variables[$3.symbolTableIndex].valueHasBeenAssigned = 1; }
                    | WRITE actual_parameter_list
@@ -323,7 +357,7 @@ compound_statement: BEGINNING statement_sequence END
 repetitive_statement: while_statement
                     | for_statement
                     ;
-while_statement: WHILE expression DO statement  { if ($2 != BOOLEAN_TYPE) {
+while_statement: WHILE expression DO statement  { if ($2.type != BOOLEAN_TYPE) {
                                                     printf("Error: control expression of while loop must be boolean\n");
                                                     return 1;
                                                   } }
@@ -351,7 +385,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                     return 1;
                                                                   }
                                                                   
-                                                                  if ($4 != INTEGER_TYPE || $6 != INTEGER_TYPE) {
+                                                                  if ($4.type != INTEGER_TYPE || $6.type != INTEGER_TYPE) {
                                                                     printf("Error: can't use non integral expression for for-loop control\n");
                                                                     return 1;
                                                                   }
@@ -380,7 +414,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                         return 1;
                                                                       }
                                                                       
-                                                                      if ($4 != INTEGER_TYPE || $6 != INTEGER_TYPE) {
+                                                                      if ($4.type != INTEGER_TYPE || $6.type != INTEGER_TYPE) {
                                                                         printf("Error: can't use non integral expression for for-loop control\n");
                                                                         return 1;
                                                                       }
@@ -390,28 +424,58 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                       symbolTable.variables[variableIndex].valueHasBeenAssigned = 1;
                                                                       symbolTable.variables[variableIndex].assignmentIsAllowed = 0; }
            ;
-if_statement: IF expression THEN statement  { if ($2 != BOOLEAN_TYPE) {
+if_statement: IF expression THEN statement  { if ($2.type != BOOLEAN_TYPE) {
                                                 printf("Error: if statement condition must be boolean\n");
                                                 return 1;
                                               } }
-            | IF expression THEN statement ELSE statement { if ($2 != BOOLEAN_TYPE) {
+            | IF expression THEN statement ELSE statement { if ($2.type != BOOLEAN_TYPE) {
                                                             printf("Error: if statement condition must be boolean\n");
                                                             return 1;
                                                           } }
             ;
-expression: simple_expression relational_operator simple_expression { if (!(($1 == INTEGER_TYPE || $1 == REAL_TYPE) && ($3 == INTEGER_TYPE || $3 == REAL_TYPE))) {
+expression: simple_expression relational_operator simple_expression { if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($3.type == INTEGER_TYPE || $3.type == REAL_TYPE))) {
                                                                         printf("Error: can't apply relation operator on non-numeric value\n");
                                                                         return 1;
                                                                       }
+
+                                                                      sprintf($$.temp, "T%d", tempCount++);
+
+                                                                      switch ($2) {
+                                                                        case EQUAL_SIGN:
+                                                                          addQuadruple($1.temp, "=", $3.temp, $$.temp);
+                                                                          break;
+                                                                        
+                                                                        case NOT_EQUAL_SIGN:
+                                                                          addQuadruple($1.temp, "<>", $3.temp, $$.temp);
+                                                                          break;
+
+                                                                        case LESS_SIGN:
+                                                                          addQuadruple($1.temp, "<", $3.temp, $$.temp);
+                                                                          break;
+
+                                                                        case LESS_OR_EQUAL_SIGN:
+                                                                          addQuadruple($1.temp, "<=", $3.temp, $$.temp);
+                                                                          break;
+                                                                        
+                                                                        case GREATER_SIGN:
+                                                                          addQuadruple($1.temp, ">", $3.temp, $$.temp);
+                                                                          break;
+                                                                        
+                                                                        case GREATER_OR_EQUAL_SIGN:
+                                                                          addQuadruple($1.temp, ">=", $3.temp, $$.temp);
+                                                                          break;
+                                                                      }
                                                                       
-                                                                      $$ = BOOLEAN_TYPE; }
+                                                                      $$.type = BOOLEAN_TYPE; }
           | simple_expression { $$ = $1; }
           ;
-simple_expression: term additional_terms  { if (!$2.isNull) {
-                                              switch ($2.additionOperator) {
+simple_expression: additional_terms term  { if (!$1.isNull) {
+                                              switch ($1.additionOperator) {
                                                 case OR_SIGN: 
-                                                  if ($1 == BOOLEAN_TYPE && $2.type == BOOLEAN_TYPE) {
-                                                    $$ = BOOLEAN_TYPE;
+                                                  if ($2.type == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
+                                                    $$.type = BOOLEAN_TYPE;
+                                                    sprintf($$.temp, "T%d", tempCount++);
+                                                    addQuadruple($1.temp, "OR", $2.temp, $$.temp);
                                                   } else {
                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
                                                     return 1;
@@ -419,32 +483,38 @@ simple_expression: term additional_terms  { if (!$2.isNull) {
                                                   break;
 
                                                 case PLUS_OPERATOR:
-                                                  if (!(($2.type == INTEGER_TYPE || $2.type == REAL_TYPE) && ($1 == INTEGER_TYPE || $1 == REAL_TYPE))) {
+                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                                     printf("Error: can't apply addition operator on non-numeric value\n");
                                                     return 1;
                                                   } else {
-                                                    $$ = ($1 == REAL_TYPE || $2.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                    $$.type = ($2.type == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                    sprintf($$.temp, "T%d", tempCount++);
+                                                    addQuadruple($1.temp, "+", $2.temp, $$.temp);
                                                   }
                                                   break;
                                                 
                                                 case MINUS_OPERATOR:
-                                                  if (!(($2.type == INTEGER_TYPE || $2.type == REAL_TYPE) && ($1 == INTEGER_TYPE || $1 == REAL_TYPE))) {
+                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                                     printf("Error: can't apply subtraction operator on non-numeric value\n");
                                                     return 1;
                                                   } else {
-                                                    $$ = ($1 == REAL_TYPE || $2.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                    $$.type = ($2.type == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                    sprintf($$.temp, "T%d", tempCount++);
+                                                    addQuadruple($1.temp, "-", $2.temp, $$.temp);
                                                   }
                                                   break;
                                               }
                                             } else {
-                                                $$ = $1;
+                                                $$ = $2;
                                             } }
                  ;
-additional_terms: addition_operator term additional_terms { if (!$3.isNull) {
-                                                              switch ($3.additionOperator) {
+additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
+                                                              switch ($1.additionOperator) {
                                                                 case OR_SIGN: 
-                                                                  if ($2 == BOOLEAN_TYPE && $3.type == BOOLEAN_TYPE) {
+                                                                  if ($2.type == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                     $$.type = BOOLEAN_TYPE;
+                                                                    sprintf($$.temp, "T%d", tempCount++);
+                                                                    addQuadruple($1.temp, "OR", $2.temp, $$.temp);
                                                                   } else {
                                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
                                                                     return 1;
@@ -452,40 +522,47 @@ additional_terms: addition_operator term additional_terms { if (!$3.isNull) {
                                                                   break;
 
                                                                 case PLUS_OPERATOR:
-                                                                  if (!(($3.type == INTEGER_TYPE || $3.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                                                     printf("Error: can't apply addition operator on non-numeric value\n");
                                                                     return 1;
                                                                   } else {
-                                                                    $$.type = ($2 == REAL_TYPE || $3.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                    $$.type = ($2.type == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                    sprintf($$.temp, "T%d", tempCount++);
+                                                                    addQuadruple($1.temp, "+", $2.temp, $$.temp);
                                                                   }
                                                                   break;
                                                                 
                                                                 case MINUS_OPERATOR:
-                                                                  if (!(($3.type == INTEGER_TYPE || $3.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                                  if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                                                     printf("Error: can't apply subtraction operator on non-numeric value\n");
                                                                     return 1;
                                                                   } else {
-                                                                    $$.type = ($2 == REAL_TYPE || $3.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                    $$.type = ($2.type == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                    sprintf($$.temp, "T%d", tempCount++);
+                                                                    addQuadruple($1.temp, "-", $2.temp, $$.temp);
                                                                   }
                                                                   break;
                                                               }
                                                             } else {
-                                                                $$.type = $2;
+                                                                $$.type = $2.type;
+                                                                strcpy($$.temp, $2.temp);
                                                             }
 
                                                             $$.isNull = 0;
-                                                            $$.additionOperator = $1; }
+                                                            $$.additionOperator = $3; }
                 | { $$.isNull = 1; }
                 ;
-addition_operator: PLUS { return PLUS_OPERATOR; }
-                 | MINUS { return MINUS_OPERATOR; }
-                 | OR { return OR_SIGN; }
+addition_operator: PLUS { $$ = PLUS_OPERATOR; }
+                 | MINUS { $$ = MINUS_OPERATOR; }
+                 | OR { $$ = OR_SIGN; }
                  ;
-term: factor additional_factors { if (!$2.isNull) {
-                                    switch ($2.multiplicationOperator) {
+term: additional_factors factor { if (!$1.isNull) {
+                                    switch ($1.multiplicationOperator) {
                                       case AND_SIGN: 
-                                        if ($1 == BOOLEAN_TYPE && $2.type == BOOLEAN_TYPE) {
-                                          $$ = BOOLEAN_TYPE;
+                                        if ($2.type == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
+                                          $$.type = BOOLEAN_TYPE;
+                                          sprintf($$.temp, "T%d", tempCount++);
+                                          addQuadruple($1.temp, "AND", $2.temp, $$.temp);
                                         } else {
                                           printf("Error: can't apply boolean operator on non-boolean value\n");
                                           return 1;
@@ -493,82 +570,108 @@ term: factor additional_factors { if (!$2.isNull) {
                                         break;
 
                                       case REMAINDER_SIGN: 
-                                        if (!($1 == INTEGER_TYPE && $2.type == INTEGER_TYPE)){
+                                        if (!($2.type == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                           printf("Error: can't apply modulo operator on non-integer value\n");
                                           return 1;
                                         } else {
-                                          $$ = INTEGER_TYPE;
+                                          $$.type = INTEGER_TYPE;
+                                          sprintf($$.temp, "T%d", tempCount++);
+                                          addQuadruple($1.temp, "%", $2.temp, $$.temp);
                                         }
                                         break;
 
                                       case DIVIDE_SIGN:
-                                        if (!(($2.type == INTEGER_TYPE || $2.type == REAL_TYPE) && ($1 == INTEGER_TYPE || $1 == REAL_TYPE))) {
+                                        if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                           printf("Error: can't apply division operator on non-numeric value\n");
                                           return 1;
                                         } else {
-                                          $$ = REAL_TYPE;
+                                          $$.type = REAL_TYPE;
+                                          sprintf($$.temp, "T%d", tempCount++);
+                                          addQuadruple($1.temp, "/", $2.temp, $$.temp);
                                         }
                                         break;
 
                                       case MULTIPLY_SIGN:
-                                        if (!(($2.type == INTEGER_TYPE || $2.type == REAL_TYPE) && ($1 == INTEGER_TYPE || $1 == REAL_TYPE))) {
+                                        if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                           printf("Error: can't apply multiplication operator on non-numeric value\n");
                                           return 1;
                                         } else {
-                                          $$ = ($1 == REAL_TYPE || $2.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                          $$.type = ($2.type == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                          sprintf($$.temp, "T%d", tempCount++);
+                                          addQuadruple($1.temp, "*", $2.temp, $$.temp);
                                         }
                                         break;
                                     }
                                   } else {
-                                      $$ = $1;
+                                      $$ = $2;
+                                      strcpy($$.temp, $2.temp);
                                   } }
-    | sign factor additional_factors  { if (!($2 == INTEGER_TYPE || $2 == REAL_TYPE)) {
+    | additional_factors sign factor  { if (!($3.type == INTEGER_TYPE || $3.type == REAL_TYPE)) {
                                           printf("Error: can't apply unary arithmetic operator on non-numeric value\n");
                                           return 1;
                                         }
-                                        if (!$3.isNull) {
-                                          switch ($3.multiplicationOperator) {
+                                        if (!$1.isNull) {
+                                          switch ($1.multiplicationOperator) {
                                             case AND_SIGN: 
                                               printf("Error: can't apply boolean operator on non-boolean value\n");
                                               return 1;
                                               break;
 
                                             case REMAINDER_SIGN: 
-                                              if (!($2 == INTEGER_TYPE && $3.type == INTEGER_TYPE)){
+                                              if (!($3.type == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                 printf("Error: can't apply modulo operator on non-integer value\n");
                                                 return 1;
                                               } else {
-                                                $$ = INTEGER_TYPE;
+                                                $$.type = INTEGER_TYPE;
+                                                char temp[50];
+                                                sprintf(temp, "T%d", tempCount++);
+                                                addQuadruple("", ($2 == PLUS_SIGN) ? "+" : "-", $3.temp, temp);
+                                                sprintf($$.temp, "T%d", tempCount++);
+                                                addQuadruple($1.temp, "%", temp, $$.temp);
                                               }
                                               break;
 
                                             case DIVIDE_SIGN:
-                                              if (!($3.type == INTEGER_TYPE || $3.type == REAL_TYPE)) {
+                                              if (!($1.type == INTEGER_TYPE || $1.type == REAL_TYPE)) {
                                                 printf("Error: can't apply division operator on non-numeric value\n");
                                                 return 1;
                                               } else {
-                                                $$ = REAL_TYPE;
+                                                $$.type = REAL_TYPE;
+                                                char temp[50];
+                                                sprintf(temp, "T%d", tempCount++);
+                                                addQuadruple("", ($2 == PLUS_SIGN) ? "+" : "-", $3.temp, temp);
+                                                sprintf($$.temp, "T%d", tempCount++);
+                                                addQuadruple($1.temp, "/", temp, $$.temp);
                                               }
                                               break;
 
                                             case MULTIPLY_SIGN:
-                                              if (!($3.type == INTEGER_TYPE || $3.type == REAL_TYPE)) {
+                                              if (!($1.type == INTEGER_TYPE || $1.type == REAL_TYPE)) {
                                                 printf("Error: can't apply multiplication operator on non-numeric value\n");
                                                 return 1;
                                               } else {
-                                                $$ = ($2 == REAL_TYPE || $3.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                $$.type = ($3.type == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                char temp[50];
+                                                sprintf(temp, "T%d", tempCount++);
+                                                addQuadruple("", ($2 == PLUS_SIGN) ? "+" : "-", $3.temp, temp);
+                                                sprintf($$.temp, "T%d", tempCount++);
+                                                addQuadruple($1.temp, "*", temp, $$.temp);
                                               }
                                               break;
                                           }
                                         } else {
-                                          $$ = $2;
+                                          $$ = $3;
+                                          sprintf($$.temp, "T%d", tempCount++);
+                                          addQuadruple("", ($2 == PLUS_SIGN) ? "+" : "-", $3.temp, $$.temp);
                                         } }
     ;
-additional_factors: multiplication_operator factor additional_factors { if (!$3.isNull) {
-                                                                          switch ($3.multiplicationOperator) {
+additional_factors: additional_factors factor multiplication_operator { if (!$1.isNull) {
+                                                                          switch ($1.multiplicationOperator) {
                                                                             case AND_SIGN: 
-                                                                              if ($2 == BOOLEAN_TYPE && $3.type == BOOLEAN_TYPE) {
+                                                                              if ($2.type == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                                 $$.type = BOOLEAN_TYPE;
+                                                                                sprintf($$.temp, "T%d", tempCount++);
+                                                                                addQuadruple($1.temp, "AND", $2.temp, $$.temp);
                                                                               } else {
                                                                                 printf("Error: can't apply boolean operator on non-boolean value\n");
                                                                                 return 1;
@@ -576,83 +679,107 @@ additional_factors: multiplication_operator factor additional_factors { if (!$3.
                                                                               break;
 
                                                                             case REMAINDER_SIGN: 
-                                                                              if (!($2 == INTEGER_TYPE && $3.type == INTEGER_TYPE)){
+                                                                              if (!($2.type == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                                                 printf("Error: can't apply modulo operator on non-integer value\n");
                                                                                 return 1;
                                                                               } else {
                                                                                 $$.type = INTEGER_TYPE;
+                                                                                sprintf($$.temp, "T%d", tempCount++);
+                                                                                addQuadruple($1.temp, "%", $2.temp, $$.temp);
                                                                               }
                                                                               break;
 
                                                                             case DIVIDE_SIGN:
-                                                                              if (!(($3.type == INTEGER_TYPE || $3.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                                              if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                                                                 printf("Error: can't apply division operator on non-numeric value\n");
                                                                                 return 1;
                                                                               } else {
                                                                                 $$.type = REAL_TYPE;
+                                                                                sprintf($$.temp, "T%d", tempCount++);
+                                                                                addQuadruple($1.temp, "/", $2.temp, $$.temp);
                                                                               }
                                                                               break;
 
                                                                             case MULTIPLY_SIGN:
-                                                                              if (!(($3.type == INTEGER_TYPE || $3.type == REAL_TYPE) && ($2 == INTEGER_TYPE || $2 == REAL_TYPE))) {
+                                                                              if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                                                                 printf("Error: can't apply multiplication operator on non-numeric value\n");
                                                                                 return 1;
                                                                               } else {
-                                                                                $$.type = ($2 == REAL_TYPE || $3.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                                $$.type = ($2.type == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                                sprintf($$.temp, "T%d", tempCount++);
+                                                                                addQuadruple($1.temp, "*", $2.temp, $$.temp);
                                                                               }
                                                                               break;
                                                                           }
                                                                         } else {
-                                                                            $$.type = $2;
+                                                                            $$.type = $2.type;
+                                                                            strcpy($$.temp, $2.temp);
                                                                         }
 
                                                                         $$.isNull = 0;
-                                                                        $$.multiplicationOperator = $1; }
-                  | multiplication_operator sign factor additional_factors  { if (!($3 == INTEGER_TYPE || $3 == REAL_TYPE)) {
+                                                                        $$.multiplicationOperator = $3; }
+                  | additional_factors sign factor multiplication_operator { if (!($3.type == INTEGER_TYPE || $3.type == REAL_TYPE)) {
                                                                                 printf("Error: can't apply unary arithmetic operator on non-numeric value\n");
                                                                                 return 1;
                                                                               }
 
-                                                                              if (!$4.isNull) {
-                                                                                switch ($4.multiplicationOperator) {
+                                                                              if (!$1.isNull) {
+                                                                                switch ($1.multiplicationOperator) {
                                                                                   case AND_SIGN: 
                                                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
                                                                                     return 1;
                                                                                     break;
 
                                                                                   case REMAINDER_SIGN: 
-                                                                                    if (!($3 == INTEGER_TYPE && $4.type == INTEGER_TYPE)){
+                                                                                    if (!($3.type == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                                                       printf("Error: can't apply modulo operator on non-integer value\n");
                                                                                       return 1;
                                                                                     } else {
                                                                                       $$.type = INTEGER_TYPE;
+                                                                                      char temp[50];
+                                                                                      sprintf(temp, "T%d", tempCount++);
+                                                                                      addQuadruple("", ($2 == PLUS_SIGN) ? "+" : "-", $3.temp, temp);
+                                                                                      sprintf($$.temp, "T%d", tempCount++);
+                                                                                      addQuadruple($1.temp, "%", temp, $$.temp);
                                                                                     }
                                                                                     break;
 
                                                                                   case DIVIDE_SIGN:
-                                                                                    if (!($4.type == INTEGER_TYPE || $4.type == REAL_TYPE)) {
+                                                                                    if (!($1.type == INTEGER_TYPE || $1.type == REAL_TYPE)) {
                                                                                       printf("Error: can't apply division operator on non-numeric value\n");
                                                                                       return 1;
                                                                                     } else {
                                                                                       $$.type = REAL_TYPE;
+                                                                                      char temp[50];
+                                                                                      sprintf(temp, "T%d", tempCount++);
+                                                                                      addQuadruple("", ($2 == PLUS_SIGN) ? "+" : "-", $3.temp, temp);
+                                                                                      sprintf($$.temp, "T%d", tempCount++);
+                                                                                      addQuadruple($1.temp, "/", temp, $$.temp);
                                                                                     }
                                                                                     break;
 
                                                                                   case MULTIPLY_SIGN:
-                                                                                    if (!($4.type == INTEGER_TYPE || $4.type == REAL_TYPE)) {
+                                                                                    if (!($1.type == INTEGER_TYPE || $1.type == REAL_TYPE)) {
                                                                                       printf("Error: can't apply multiplication operator on non-numeric value\n");
                                                                                       return 1;
                                                                                     } else {
-                                                                                      $$.type = ($3 == REAL_TYPE || $4.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                                      $$.type = ($3.type == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
+                                                                                      char temp[50];
+                                                                                      sprintf(temp, "T%d", tempCount++);
+                                                                                      addQuadruple("", ($2 == PLUS_SIGN) ? "+" : "-", $3.temp, temp);
+                                                                                      sprintf($$.temp, "T%d", tempCount++);
+                                                                                      addQuadruple($1.temp, "*", temp, $$.temp);
                                                                                     }
                                                                                     break;
                                                                                 }
                                                                               } else {
-                                                                                $$.type = $3;
+                                                                                $$.type = $3.type;
+                                                                                sprintf($$.temp, "T%d", tempCount++);
+                                                                                addQuadruple("", ($2 == PLUS_SIGN) ? "+" : "-", $3.temp, $$.temp);
                                                                               }
 
                                                                               $$.isNull = 0;
-                                                                              $$.multiplicationOperator = $1; }
+                                                                              $$.multiplicationOperator = $4; }
                   | { $$.isNull = 1; }
                   ;
 multiplication_operator: MULTIPLY { $$ = MULTIPLY_SIGN; }
@@ -678,22 +805,69 @@ factor: variable  { if(symbolTable.variables[$1.symbolTableIndex].typeInfo.type 
                     }
                     
                     if (!$1.isIndexed) {
-                      $$ = symbolTable.variables[$1.symbolTableIndex].typeInfo.type;
+                      $$.type = symbolTable.variables[$1.symbolTableIndex].typeInfo.type;
+                      strcpy($$.temp, symbolTable.variables[$1.symbolTableIndex].identifier);
                     } else {
-                      $$ = symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType;
+                      $$.type = symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType;
+
+                      char varSize[5];
+                      switch (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType) {
+                        case INTEGER_TYPE:
+                          sprintf(varSize, "4");
+                          break;
+                        case REAL_TYPE:
+                          sprintf(varSize, "4");
+                          break;
+                        case CHAR_TYPE:
+                          sprintf(varSize, "1");
+                          break;
+                        case BOOLEAN_TYPE:
+                          sprintf(varSize, "1");
+                          break;
+                      }
+
+                      char sizeTemp[50];
+                      sprintf(sizeTemp, "T%d", tempCount++);
+                      addQuadruple(varSize, "*", $1.indexExpressionTemp, sizeTemp);
+
+                      char offsetTemp[50];
+                      sprintf(offsetTemp, "T%d", tempCount++);
+                      char minIndex[5];
+                      if (symbolTable.variables[$1.symbolTableIndex].typeInfo.minIndex >= 0) {
+                        sprintf(minIndex, "%d", symbolTable.variables[$1.symbolTableIndex].typeInfo.minIndex);
+                        addQuadruple(sizeTemp, "+", minIndex, offsetTemp);
+                      } else {
+                        sprintf(minIndex, "%d", -symbolTable.variables[$1.symbolTableIndex].typeInfo.minIndex);
+                        addQuadruple(sizeTemp, "-", minIndex, offsetTemp);
+                      }
+
+                      char accessTemp[50];
+                      sprintf(accessTemp, "T%d", tempCount++);
+                      addQuadruple("", "&", symbolTable.variables[$1.symbolTableIndex].identifier, accessTemp);
+
+                      char finalAddressTemp[50];
+                      sprintf(finalAddressTemp, "T%d", tempCount++);
+                      addQuadruple(accessTemp, "+", offsetTemp, finalAddressTemp);
+
+                      sprintf($$.temp, "T%d", tempCount++);
+                      addQuadruple("", "*", finalAddressTemp, $$.temp);
                     } }
       | number  { if ($1.type == INTEGER_TYPE) {
-                    $$ = INTEGER_TYPE;
+                    $$.type = INTEGER_TYPE;
+                    sprintf($$.temp, "%d", $1.integerValue);
                   } else {
-                    $$ = REAL_TYPE;
+                    $$.type = REAL_TYPE;
+                    sprintf($$.temp, "%f", $1.realValue);
                   } }
       | LPAREN expression RPAREN { $$ = $2; }
-      | NOT factor  { if ($2 != BOOLEAN_TYPE) {
+      | NOT factor  { if ($2.type != BOOLEAN_TYPE) {
                         printf("Error: can't use boolean operator NOT on non boolean value\n");
                         return 1;
                       }
-                      
-                      $$ = BOOLEAN_TYPE; }
+
+                      $$.type = BOOLEAN_TYPE;
+                      sprintf($$.temp, "T%d", tempCount++);
+                      addQuadruple("", "NOT", $2.temp, $$.temp); }
       ;
 variable: IDENTIFIER  { int variableIndex = -1;
                         for (int i = 0; i < symbolTable.size; i++) {
@@ -719,13 +893,14 @@ indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN { if (symbolTabl
                                                                     return 1;
                                                                   }
                                                                   
-                                                                  if ($3 != INTEGER_TYPE) {
+                                                                  if ($3.type != INTEGER_TYPE) {
                                                                     printf("Error: can't access non-integer index of array variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                                     return 1;
                                                                   }
 
                                                                   $$.symbolTableIndex = $1.symbolTableIndex;
-                                                                  $$.isIndexed = 1; }
+                                                                  $$.isIndexed = 1;
+                                                                  strcpy($$.indexExpressionTemp, $3.temp); }
                 ;
 number: integer_number { $$.type = INTEGER_TYPE; $$.integerValue = $1; }
       | real_number { $$.type = REAL_TYPE; $$.realValue = $1; }
@@ -743,7 +918,7 @@ real_number: digit_sequence DOT digit_sequence  { float decimalVal = $3;
                                                     realVal *= 10;
                                                   }
                                                 } else {
-                                                  for (int i = 0; i < $3; i++) {
+                                                  for (int i = 0; i < -$3; i++) {
                                                     realVal /= 10;
                                                   }
                                                 }
@@ -759,7 +934,7 @@ real_number: digit_sequence DOT digit_sequence  { float decimalVal = $3;
                                                                   realVal *= 10;
                                                                 }
                                                               } else {
-                                                                for (int i = 0; i < $4; i++) {
+                                                                for (int i = 0; i < -$4; i++) {
                                                                   realVal /= 10;
                                                                 }
                                                               }
@@ -770,7 +945,7 @@ real_number: digit_sequence DOT digit_sequence  { float decimalVal = $3;
                                                 realVal *= 10;
                                               }
                                             } else {
-                                              for (int i = 0; i < $2; i++) {
+                                              for (int i = 0; i < -$2; i++) {
                                                 realVal /= 10;
                                               }
                                             }

@@ -352,7 +352,8 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
 
                                                         $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3.ast);
                                                       }
-                    | variable ASSIGNMENT char  { free($3);
+                    | variable ASSIGNMENT char  { $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), con($3[0], CHAR_TYPE));
+                                                  free($3);
                                                   if (!$1.isIndexed) {
                                                     if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type != CHAR_TYPE) {
                                                       printf("Error: can't assign char literal to non char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);

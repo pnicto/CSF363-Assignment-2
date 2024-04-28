@@ -386,7 +386,13 @@ procedure_statement: READ LPAREN variable RPAREN  { if (symbolTable.variables[$3
                                                       printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$3.symbolTableIndex].identifier);
                                                       return 1;
                                                     }
-                                                    $$ = opr(READ, 1, id(symbolTable.variables[$3.symbolTableIndex].identifier));
+
+                                                    if($3.isIndexed){
+                                                      $$ = opr(READ, 1, $3.ast);
+                                                    } else {
+                                                      $$ = opr(READ, 1, id(symbolTable.variables[$3.symbolTableIndex].identifier));
+                                                    }
+
                                                     symbolTable.variables[$3.symbolTableIndex].valueHasBeenAssigned = 1; }
                    | WRITE actual_parameter_list { $$ = opr(WRITE, 1, $2); }
                    ;
@@ -844,7 +850,7 @@ variable: IDENTIFIER  { int variableIndex = -1;
                         $$.isIndexed = 0;
                         $$.symbolTableIndex = variableIndex;
                         free($1); }
-        | indexed_variable { $$ = $1; }
+        | indexed_variable { $$.ast = $1.ast; }
         ;
 indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN { if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type != ARRAY_TYPE) {
                                                                     printf("Error: can't access indexed element of non-array variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
@@ -857,7 +863,10 @@ indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN { if (symbolTabl
                                                                   }
 
                                                                   $$.symbolTableIndex = $1.symbolTableIndex;
-                                                                  $$.isIndexed = 1; }
+                                                                  $$.isIndexed = 1;
+
+                                                                  $$.ast = opr('a', 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3.ast);
+                                                                }
                 ;
 number: integer_number { $$.type = INTEGER_TYPE; $$.integerValue = $1; }
       | real_number { $$.type = REAL_TYPE; $$.realValue = $1; }
@@ -1163,6 +1172,9 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case NOT:
           s = "not";
+          break;
+        case 'a':
+          s = "array";
           break;
       }
       break;

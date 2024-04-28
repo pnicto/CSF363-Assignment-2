@@ -26,7 +26,8 @@ int graphNumber = 0;
     REAL_TYPE,
     BOOLEAN_TYPE,
     CHAR_TYPE,
-    ARRAY_TYPE
+    ARRAY_TYPE,
+    STRING_TYPE // this is used only for the AST write procedure
   };
 
   typedef struct {
@@ -34,6 +35,7 @@ int graphNumber = 0;
       int i;
       float r;
       char c;
+      char* s;
     };
     enum Type type;
   } ConstantNode;
@@ -151,6 +153,11 @@ int graphNumber = 0;
     Node *ast;
   };
 
+  struct ParameterList {
+    Node* parameters[100];
+    int size;
+  };
+
   void graphInit(void);
   void graphFinish();
   void graphBox(char *s, int *w, int *h);
@@ -162,7 +169,7 @@ int graphNumber = 0;
   // this file declarations
   Node *opr(int oper, int nops, ...);
   Node *id(char* name);
-  Node *con(float value, enum Type type);
+  Node *con(void* value, enum Type type);
 }
 
 %union {
@@ -183,6 +190,7 @@ int graphNumber = 0;
   struct AdditionalFactor additionalFactor;
   struct AdditionalTerm additionalTerm;
   struct ForControl forControl;
+  struct ParameterList parameterList;
   Node* node;
 }
 
@@ -226,7 +234,7 @@ int graphNumber = 0;
 %type <additionalTerm> additional_terms
 %type <forControl> for_control
 
-%type <node> statement simple_statement assignment_statement block statement_part statement_sequence procedure_statement structured_statement if_statement
+%type <node> statement simple_statement assignment_statement block statement_part statement_sequence procedure_statement structured_statement if_statement actual_parameter other_actual_parameters actual_parameter_list
 
 // Precedence rule for else shift-reduce conflict
 %right THEN ELSE
@@ -352,7 +360,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
 
                                                         $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3.ast);
                                                       }
-                    | variable ASSIGNMENT char  { $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), con($3[0], CHAR_TYPE));
+                    | variable ASSIGNMENT char  { $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), con((void*)(&$3), CHAR_TYPE));
                                                   free($3);
                                                   if (!$1.isIndexed) {
                                                     if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type != CHAR_TYPE) {
@@ -373,15 +381,15 @@ procedure_statement: READ LPAREN variable RPAREN  { if (symbolTable.variables[$3
                                                     }
                                                     $$ = opr(READ, 1, id(symbolTable.variables[$3.symbolTableIndex].identifier));
                                                     symbolTable.variables[$3.symbolTableIndex].valueHasBeenAssigned = 1; }
-                   | WRITE actual_parameter_list
+                   | WRITE actual_parameter_list { $$ = opr(WRITE, 1, $2); }
                    ;
-actual_parameter_list: LPAREN actual_parameter other_actual_parameters RPAREN
+actual_parameter_list: LPAREN actual_parameter other_actual_parameters RPAREN { $$ = opr(COMMA, 2, $2, $3); }
                      ;
-other_actual_parameters: COMMA actual_parameter other_actual_parameters
-                       |
+other_actual_parameters: COMMA actual_parameter other_actual_parameters { $$ = opr(COMMA, 2, $2, $3); }
+                       | { $$ = NULL; }
                        ;
-actual_parameter: expression
-                | string { free($1); }
+actual_parameter: expression { $$ = $1.ast; }
+                | string { $$ = con((void*)($1), STRING_TYPE); }
                 ;
 structured_statement: compound_statement
                     | repetitive_statement
@@ -782,10 +790,10 @@ factor: variable  { if(symbolTable.variables[$1.symbolTableIndex].typeInfo.type 
                     } }
       | number  { if ($1.type == INTEGER_TYPE) {
                     $$.valueType = INTEGER_TYPE;
-                    $$.ast = con($1.integerValue, INTEGER_TYPE);
+                    $$.ast = con((void*)(&($1.integerValue)), INTEGER_TYPE);
                   } else {
                     $$.valueType = REAL_TYPE;
-                    $$.ast = con($1.realValue, REAL_TYPE);
+                    $$.ast = con((void*)(&($1.realValue)), REAL_TYPE);
                   } }
       | LPAREN expression RPAREN { $$.valueType = $2.valueType; }
       | NOT factor  { if ($2.valueType != BOOLEAN_TYPE) {
@@ -987,7 +995,7 @@ Node *id(char *name) {
   return p;
 }
 
-Node *con(float value, enum Type type){
+Node *con(void* value, enum Type type){
   Node *p;
 
   if ((p = malloc(sizeof(Node))) == NULL) yyerror("out of memory");
@@ -995,16 +1003,20 @@ Node *con(float value, enum Type type){
   p->type = CONSTANT;
   switch(type) {
     case INTEGER_TYPE:
-      p->constant.i = (int)value;
+      p->constant.i = *(int*)value;
       p->constant.type = INTEGER_TYPE;
       break;
     case REAL_TYPE:
-      p->constant.r = value;
+      p->constant.r = *(float*)value;
       p->constant.type = REAL_TYPE;
       break;
     case CHAR_TYPE:
-      p->constant.c = (char)value;
+      p->constant.c = *(char*)value;
       p->constant.type = CHAR_TYPE;
+      break;
+    case STRING_TYPE:
+      p->constant.s = (char*)value;
+      p->constant.type = STRING_TYPE;
       break;
   }
 
@@ -1045,6 +1057,9 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case CHAR_TYPE:
           sprintf(word, "c(%c)", p->constant.c);
+          break;
+        case STRING_TYPE:
+          sprintf(word, "c(%s)", p->constant.s);
           break;
       }
       break;
@@ -1100,6 +1115,15 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case ASSIGNMENT:
           s = "[:=]";
+          break;
+        case COMMA:
+          s = "[,]";
+          break;
+        case READ:
+          s = "read";
+          break;
+        case WRITE:
+          s = "write";
           break;
       }
       break;

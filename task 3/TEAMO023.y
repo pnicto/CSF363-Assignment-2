@@ -23,7 +23,7 @@ int graphNumber = 0;
   typedef enum { CONSTANT, ID, OPERATOR } NodeType;
 
   typedef struct {
-    int value;
+    float value;
   } ConstantNode;
 
   typedef struct {
@@ -157,7 +157,7 @@ int graphNumber = 0;
   // this file declarations
   Node *opr(int oper, int nops, ...);
   Node *id(char* name);
-  Node *con(int value);
+  Node *con(float value);
 }
 
 %union {
@@ -981,7 +981,7 @@ Node *id(char *name) {
   return p;
 }
 
-Node *con(int value) {
+Node *con(float value) {
   Node *p;
 
   if ((p = malloc(sizeof(Node))) == NULL) yyerror("out of memory");
@@ -1017,7 +1017,7 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
 
   switch (p->type) {
     case CONSTANT:
-      sprintf(word, "c(%d)", p->constant.value);
+      sprintf(word, "c(%f)", p->constant.value);
       break;
     case ID:
       sprintf(word, "id(%s)", p->identifier.name);

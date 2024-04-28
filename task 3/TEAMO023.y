@@ -21,9 +21,21 @@ int graphNumber = 0;
 
   // graph related declarations
   typedef enum { CONSTANT, ID, OPERATOR } NodeType;
+   enum Type {
+    INTEGER_TYPE,
+    REAL_TYPE,
+    BOOLEAN_TYPE,
+    CHAR_TYPE,
+    ARRAY_TYPE
+  };
 
   typedef struct {
-    float value;
+    union {
+      int i;
+      float r;
+      char c;
+    };
+    enum Type type;
   } ConstantNode;
 
   typedef struct {
@@ -45,13 +57,6 @@ int graphNumber = 0;
     };
   } Node;
 
-  enum Type {
-    INTEGER_TYPE,
-    REAL_TYPE,
-    BOOLEAN_TYPE,
-    CHAR_TYPE,
-    ARRAY_TYPE
-  };
 
   enum MultiplicationOperator {
     MULTIPLY_SIGN,
@@ -157,7 +162,7 @@ int graphNumber = 0;
   // this file declarations
   Node *opr(int oper, int nops, ...);
   Node *id(char* name);
-  Node *con(float value);
+  Node *con(float value, enum Type type);
 }
 
 %union {
@@ -776,10 +781,10 @@ factor: variable  { if(symbolTable.variables[$1.symbolTableIndex].typeInfo.type 
                     } }
       | number  { if ($1.type == INTEGER_TYPE) {
                     $$.valueType = INTEGER_TYPE;
-                    $$.ast = con($1.integerValue);
+                    $$.ast = con($1.integerValue, INTEGER_TYPE);
                   } else {
                     $$.valueType = REAL_TYPE;
-                    $$.ast = con($1.realValue);
+                    $$.ast = con($1.realValue, REAL_TYPE);
                   } }
       | LPAREN expression RPAREN { $$.valueType = $2.valueType; }
       | NOT factor  { if ($2.valueType != BOOLEAN_TYPE) {
@@ -981,13 +986,26 @@ Node *id(char *name) {
   return p;
 }
 
-Node *con(float value) {
+Node *con(float value, enum Type type){
   Node *p;
 
   if ((p = malloc(sizeof(Node))) == NULL) yyerror("out of memory");
 
   p->type = CONSTANT;
-  p->constant.value = value;
+  switch(type) {
+    case INTEGER_TYPE:
+      p->constant.i = (int)value;
+      p->constant.type = INTEGER_TYPE;
+      break;
+    case REAL_TYPE:
+      p->constant.r = value;
+      p->constant.type = REAL_TYPE;
+      break;
+    case CHAR_TYPE:
+      p->constant.c = (char)value;
+      p->constant.type = CHAR_TYPE;
+      break;
+  }
 
   return p;
 }
@@ -1017,7 +1035,17 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
 
   switch (p->type) {
     case CONSTANT:
-      sprintf(word, "c(%f)", p->constant.value);
+      switch(p->constant.type) {
+        case INTEGER_TYPE:
+          sprintf(word, "c(%d)", p->constant.i);
+          break;
+        case REAL_TYPE:
+          sprintf(word, "c(%f)", p->constant.r);
+          break;
+        case CHAR_TYPE:
+          sprintf(word, "c(%c)", p->constant.c);
+          break;
+      }
       break;
     case ID:
       sprintf(word, "id(%s)", p->identifier.name);

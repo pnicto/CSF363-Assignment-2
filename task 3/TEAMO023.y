@@ -87,6 +87,10 @@ int graphNumber = 0;
     MINUS_SIGN
   };
 
+  typedef enum {
+    IF_ELSE = 15
+  } ExtraAstTypes;
+
   struct TypeInfo {
     enum Type type;
     // The remaining 3 attributes are only used in arrays
@@ -475,7 +479,9 @@ if_statement: IF expression THEN statement  { if ($2.valueType != BOOLEAN_TYPE) 
             | IF expression THEN statement ELSE statement { if ($2.valueType != BOOLEAN_TYPE) {
                                                             printf("Error: if statement condition must be boolean\n");
                                                             return 1;
-                                                          } }
+                                                          }
+                                                           $$ = opr(IF_ELSE, 3, $2.ast, $4, $6);
+                                                          }
             ;
 expression: simple_expression relational_operator simple_expression { if (!(($1.valueType == INTEGER_TYPE || $1.valueType == REAL_TYPE) && ($3.valueType == INTEGER_TYPE || $3.valueType == REAL_TYPE))) {
                                                                         printf("Error: can't apply relation operator on non-numeric value\n");
@@ -1068,6 +1074,12 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
       break;
     case OPERATOR:
       switch (p->opr.opr) {
+        case IF:
+          s = "if";
+          break;
+        case IF_ELSE:
+          s = "if...else";
+          break;
         case WHILE:
           s = "while";
           break;

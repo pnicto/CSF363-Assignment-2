@@ -417,7 +417,6 @@ while_statement: WHILE expression DO statement  { if ($2.valueType != BOOLEAN_TY
                ;
 for_statement: for_control DO statement { symbolTable.variables[$1.controlIndex].valueHasBeenAssigned = $1.oldControlAssignmentStatus;
                                           symbolTable.variables[$1.controlIndex].assignmentIsAllowed = 1;
-                                          printf("hello %d\n", $1.ast->opr.nOperands);
                                           $$ = opr($1.ast->opr.opr, 3, $1.ast->opr.operands[0], $1.ast->opr.operands[1],$3);
                                         }
              ;

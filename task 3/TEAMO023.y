@@ -349,13 +349,13 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                       }
                     | variable ASSIGNMENT char  { free($3);
                                                   if (!$1.isIndexed) {
-                                                    if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == CHAR_TYPE) {
-                                                      printf("Error: can't assign char literal to no char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
+                                                    if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type != CHAR_TYPE) {
+                                                      printf("Error: can't assign char literal to non char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                       return 1;
                                                     }
                                                   } else {
-                                                    if (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType == CHAR_TYPE) {
-                                                      printf("Error: can't assign char literal to no char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
+                                                    if (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType != CHAR_TYPE) {
+                                                      printf("Error: can't assign char literal to non char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                       return 1;
                                                     }
                                                   }
@@ -837,7 +837,7 @@ real_number: digit_sequence DOT digit_sequence  { float decimalVal = $3;
                                                     realVal *= 10;
                                                   }
                                                 } else {
-                                                  for (int i = 0; i < $3; i++) {
+                                                  for (int i = 0; i < -$3; i++) {
                                                     realVal /= 10;
                                                   }
                                                 }
@@ -853,7 +853,7 @@ real_number: digit_sequence DOT digit_sequence  { float decimalVal = $3;
                                                                   realVal *= 10;
                                                                 }
                                                               } else {
-                                                                for (int i = 0; i < $4; i++) {
+                                                                for (int i = 0; i < -$4; i++) {
                                                                   realVal /= 10;
                                                                 }
                                                               }
@@ -864,7 +864,7 @@ real_number: digit_sequence DOT digit_sequence  { float decimalVal = $3;
                                                 realVal *= 10;
                                               }
                                             } else {
-                                              for (int i = 0; i < $2; i++) {
+                                              for (int i = 0; i < -$2; i++) {
                                                 realVal /= 10;
                                               }
                                             }

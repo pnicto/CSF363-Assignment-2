@@ -88,7 +88,9 @@ int graphNumber = 0;
   };
 
   typedef enum {
-    IF_ELSE = 15
+    IF_ELSE = 15,
+    FOR_TO,
+    FOR_DOWNTO
   } ExtraAstTypes;
 
   struct TypeInfo {
@@ -150,6 +152,7 @@ int graphNumber = 0;
   struct ForControl {
     int controlIndex;
     int oldControlAssignmentStatus;
+    Node *ast;
   };
 
   struct Expression {
@@ -238,7 +241,7 @@ int graphNumber = 0;
 %type <additionalTerm> additional_terms
 %type <forControl> for_control
 
-%type <node> statement simple_statement assignment_statement block statement_part statement_sequence procedure_statement structured_statement if_statement actual_parameter other_actual_parameters actual_parameter_list
+%type <node> statement simple_statement assignment_statement block statement_part statement_sequence procedure_statement structured_statement if_statement actual_parameter other_actual_parameters actual_parameter_list compound_statement repetitive_statement while_statement for_statement
 
 // Precedence rule for else shift-reduce conflict
 %right THEN ELSE
@@ -395,22 +398,28 @@ other_actual_parameters: COMMA actual_parameter other_actual_parameters { $$ = o
 actual_parameter: expression { $$ = $1.ast; }
                 | string { $$ = con((void*)($1), STRING_TYPE); }
                 ;
-structured_statement: compound_statement
+structured_statement: compound_statement { $$ = $1; }
                     | repetitive_statement
                     | if_statement { $$ = $1; }
                     ;
-compound_statement: BEGINNING statement_sequence END
+compound_statement: BEGINNING statement_sequence END { $$ = $2; }
                   ;
-repetitive_statement: while_statement
-                    | for_statement
+repetitive_statement: while_statement { $$ = $1; }
+                    | for_statement { $$ = $1; }
                     ;
 while_statement: WHILE expression DO statement  { if ($2.valueType != BOOLEAN_TYPE) {
                                                     printf("Error: control expression of while loop must be boolean\n");
                                                     return 1;
-                                                  } }
+                                                  }
+
+                                                  $$ = opr(WHILE, 2, $2.ast, $4);
+                                                }
                ;
 for_statement: for_control DO statement { symbolTable.variables[$1.controlIndex].valueHasBeenAssigned = $1.oldControlAssignmentStatus;
-                                          symbolTable.variables[$1.controlIndex].assignmentIsAllowed = 1; }
+                                          symbolTable.variables[$1.controlIndex].assignmentIsAllowed = 1;
+                                          printf("hello %d\n", $1.ast->opr.nOperands);
+                                          $$ = opr($1.ast->opr.opr, 3, $1.ast->opr.operands[0], $1.ast->opr.operands[1],$3);
+                                        }
              ;
 for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIndex = -1;
                                                                   for (int i = 0; i < symbolTable.size; i++) {
@@ -440,7 +449,11 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                   $$.oldControlAssignmentStatus = symbolTable.variables[variableIndex].valueHasBeenAssigned;
                                                                   $$.controlIndex = variableIndex;
                                                                   symbolTable.variables[variableIndex].valueHasBeenAssigned = 1;
-                                                                  symbolTable.variables[variableIndex].assignmentIsAllowed = 0; }
+                                                                  symbolTable.variables[variableIndex].assignmentIsAllowed = 0;
+
+                                                                  Node* assignment = opr(ASSIGNMENT, 2, id(symbolTable.variables[variableIndex].identifier), $4.ast);
+                                                                  $$.ast = opr(FOR_TO, 2, assignment, $6.ast);
+                                                                }
            | FOR IDENTIFIER ASSIGNMENT expression DOWNTO expression { int variableIndex = -1;
                                                                       for (int i = 0; i < symbolTable.size; i++) {
                                                                         if (strcmp(symbolTable.variables[i].identifier, $2) == 0) {
@@ -469,7 +482,11 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                       $$.oldControlAssignmentStatus = symbolTable.variables[variableIndex].valueHasBeenAssigned;
                                                                       $$.controlIndex = variableIndex;
                                                                       symbolTable.variables[variableIndex].valueHasBeenAssigned = 1;
-                                                                      symbolTable.variables[variableIndex].assignmentIsAllowed = 0; }
+                                                                      symbolTable.variables[variableIndex].assignmentIsAllowed = 0;
+
+                                                                      Node* assignment = opr(ASSIGNMENT, 2, id(symbolTable.variables[variableIndex].identifier), $4.ast);
+                                                                      $$.ast = opr(FOR_DOWNTO, 2, assignment, $6.ast);
+                                                                    }
            ;
 if_statement: IF expression THEN statement  { if ($2.valueType != BOOLEAN_TYPE) {
                                                 printf("Error: if statement condition must be boolean\n");
@@ -1082,6 +1099,12 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case WHILE:
           s = "while";
+          break;
+        case FOR_TO:
+          s = "for...to";
+          break;
+        case FOR_DOWNTO:
+          s = "for...downto";
           break;
         case MULTIPLY_SIGN:
           s = "[*]";

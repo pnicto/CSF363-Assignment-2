@@ -365,10 +365,15 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                         }
                                                         symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1;
 
-                                                        $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3.ast);
+                                                        if($1.isIndexed){
+                                                          $$ = opr(ASSIGNMENT, 2, $1.ast, $3.ast);
+                                                        } else {
+                                                          $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3.ast);
+                                                        }
                                                       }
-                    | variable ASSIGNMENT char  { $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), con((void*)(&$3), CHAR_TYPE));
-                                                  free($3);
+                    | variable ASSIGNMENT char  {
+
+
                                                   if (!$1.isIndexed) {
                                                     if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type != CHAR_TYPE) {
                                                       printf("Error: can't assign char literal to non char variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
@@ -380,7 +385,16 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                       return 1;
                                                     }
                                                   }
-                                                  symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1; }
+                                                  symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1;
+
+
+                                                  if($1.isIndexed){
+                                                    $$ = opr(ASSIGNMENT, 2, $1.ast, con((void*)(&$3[0]), CHAR_TYPE));
+                                                  } else {
+                                                    $$ = opr(ASSIGNMENT, 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), con((void*)(&$3[0]), CHAR_TYPE));
+                                                  }
+
+                                                }
                     ;
 procedure_statement: READ LPAREN variable RPAREN  { if (symbolTable.variables[$3.symbolTableIndex].assignmentIsAllowed == 0) {
                                                       printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$3.symbolTableIndex].identifier);

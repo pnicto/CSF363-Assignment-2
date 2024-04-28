@@ -1064,7 +1064,7 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
   int che, chm; /* end column and mid of children */
   int cs;       /* start column of children */
   // TODO: Change this to a bigger limit probably
-  char word[20]; /* extended node text */
+  char word[200]; /* extended node text */
 
   if (!p) return;
   strcpy(word, "???"); /* should never appear */

@@ -59,14 +59,14 @@ int graphNumber = 0;
 
 
   enum MultiplicationOperator {
-    MULTIPLY_SIGN,
+    MULTIPLY_SIGN = 0,
     DIVIDE_SIGN,
     REMAINDER_SIGN,
     AND_SIGN
   };
 
   enum RelationalOperator {
-    EQUAL_SIGN,
+    EQUAL_SIGN = 4,
     NOT_EQUAL_SIGN,
     LESS_SIGN,
     LESS_OR_EQUAL_SIGN,
@@ -75,13 +75,13 @@ int graphNumber = 0;
   };
 
   enum AdditionOperator {
-    PLUS_OPERATOR,
+    PLUS_OPERATOR = 10,
     MINUS_OPERATOR,
     OR_SIGN
   };
 
   enum Sign {
-    PLUS_SIGN,
+    PLUS_SIGN = 13,
     MINUS_SIGN
   };
 
@@ -318,7 +318,7 @@ subrange_type: constant DOTDOT constant { if (!($1.type == INTEGER_TYPE && $3.ty
                                           $$.minIndex = $1.integerValue;
                                           $$.maxIndex = $3.integerValue; }
              ;
-statement_sequence: statement SEMICOLON statement_sequence { $$ = opr(';', 2, $1, $3); }
+statement_sequence: statement SEMICOLON statement_sequence { $$ = opr(SEMICOLON, 2, $1, $3); }
                   | statement { $$ = $1; }
                   | { $$ = NULL; }
                   ;
@@ -579,7 +579,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                           return 1;
                                         } else {
                                           $$.valueType = INTEGER_TYPE;
-                                          $$.ast = opr('%', 2, $1.ast, $2.ast);
+                                          $$.ast = opr(REMAINDER_SIGN, 2, $1.ast, $2.ast);
                                         }
                                         break;
 
@@ -589,7 +589,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                           return 1;
                                         } else {
                                           $$.valueType = REAL_TYPE;
-                                          $$.ast = opr('/', 2, $1.ast, $2.ast);
+                                          $$.ast = opr(DIVIDE_SIGN, 2, $1.ast, $2.ast);
                                         }
                                         break;
 
@@ -599,7 +599,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                           return 1;
                                         } else {
                                           $$.valueType = ($2.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
-                                          $$.ast = opr('*', 2, $1.ast, $2.ast);
+                                          $$.ast = opr(MULTIPLY_SIGN, 2, $1.ast, $2.ast);
                                         }
                                         break;
                                     }
@@ -1056,11 +1056,35 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
         case WHILE:
           s = "while";
           break;
-        case ASSIGNMENT:
-          s = "[:=]";
+        case MULTIPLY_SIGN:
+          s = "[*]";
           break;
-        case OR_SIGN:
-          s = "[or]";
+        case DIVIDE_SIGN:
+          s = "[/]";
+          break;
+        case REMAINDER_SIGN:
+          s = "[%]";
+          break;
+        case AND_SIGN:
+          s = "[and]";
+          break;
+        case EQUAL_SIGN:
+          s = "[=]";
+          break;
+        case NOT_EQUAL_SIGN:
+          s = "[<>]";
+          break;
+        case LESS_SIGN:
+          s = "[<]";
+          break;
+        case LESS_OR_EQUAL_SIGN:
+          s = "[<=]";
+          break;
+        case GREATER_SIGN:
+          s = "[>]";
+          break;
+        case GREATER_OR_EQUAL_SIGN:
+          s = "[>=]";
           break;
         case PLUS_OPERATOR:
           s = "[+]";
@@ -1068,29 +1092,14 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
         case MINUS_OPERATOR:
           s = "[-]";
           break;
-        case '*':
-          s = "[*]";
+        case OR_SIGN:
+          s = "[or]";
           break;
-        case '/':
-          s = "[/]";
-          break;
-        case '%':
-          s = "[%]";
-          break;
-        case ';':
+        case SEMICOLON:
           s = "[;]";
           break;
-        case READ:
-          s = "[read]";
-          break;
-        case IF:
-          s = "[if]";
-          break;
-        case '<':
-          s = "[<]";
-          break;
-        case '>':
-          s = "[>]";
+        case ASSIGNMENT:
+          s = "[:=]";
           break;
       }
       break;

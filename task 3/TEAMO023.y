@@ -264,7 +264,7 @@ int graphNumber = 0;
 %%
 program: program_heading block DOT  {
                                       // printf("valid input\n");
-                                      $$ = opr(PROGRAM, 4, id($1.values[0]), keyword(SEMICOLON), $2->opr.operands[0], $2->opr.operands[1]);
+                                      $$ = opr(PROGRAM, 7, id($1.values[0]), keyword(SEMICOLON), $2->opr.operands[0], $2->opr.operands[1], $2->opr.operands[2], $2->opr.operands[3], keyword(DOT));
                                       createAST($$);
                                       return 0; }
        ;
@@ -274,12 +274,12 @@ program_heading: PROGRAM IDENTIFIER SEMICOLON { struct ProgpagateValues progpaga
                                                 progpagateValues.enums[1] = SEMICOLON;
                                                 $$ = progpagateValues; }
                ;
-block: declaration_part statement_part { $$ = opr(PROGRAM, 2, $1, $2); }
+block: declaration_part statement_part { $$ = opr(PROGRAM, 4, $1, $2->opr.operands[0], $2->opr.operands[1], $2->opr.operands[2]); }
      ;
 declaration_part: /* empty */ { $$ = NULL; }
                 | variable_declaration_part { $$ = $1; }
                 ;
-statement_part: BEGINNING statement_sequence END { $$ = $2; }
+statement_part: BEGINNING statement_sequence END { $$ = opr(PROGRAM, 3, keyword(BEGINNING), $2, keyword(END)); }
               ;
 variable_declaration_part: VAR variable_declaration SEMICOLON more_variable_declarations { $$ = opr(VAR, 3, $2, keyword(SEMICOLON), $4); }
                          ;
@@ -1353,6 +1353,15 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case DOTDOT:
           s = "..";
+          break;
+        case BEGINNING:
+          s = "begin";
+          break;
+        case END:
+          s = "end";
+          break;
+        case DOT:
+          s = "[.]";
           break;
       }
       break;

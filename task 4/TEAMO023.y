@@ -352,8 +352,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                           addQuadruple($$.quadruple, &$$.quadrupleSize, $3.temp, "", "", varIdentifier, "");
                                                         }
                                                         symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1; }
-                    | variable ASSIGNMENT char  { free($3);
-                                                  $$.quadrupleSize = 0;
+                    | variable ASSIGNMENT char  { $$.quadrupleSize = 0;
 
                                                   if (!$1.isIndexed) {
                                                     if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type != CHAR_TYPE) {
@@ -376,7 +375,8 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                     sprintf(charLiteral, "\"%c\"", $3[1]);
                                                     addQuadruple($$.quadruple, &$$.quadrupleSize, charLiteral, "", "", varIdentifier, "");
                                                   }
-                                                  symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1; }
+                                                  symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1;
+                                                  free($3); }
                     ;
 procedure_statement: READ LPAREN variable RPAREN  { if (symbolTable.variables[$3.symbolTableIndex].assignmentIsAllowed == 0) {
                                                       printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$3.symbolTableIndex].identifier);

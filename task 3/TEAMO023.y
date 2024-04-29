@@ -745,7 +745,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                                 // return 1;
                                               }
                                               $$.valueType = INTEGER_TYPE;
-                                              $$.ast = opr(REMAINDER_SIGN, 2, $1.ast, $3.ast);
+                                              $$.ast = opr(REMAINDER_SIGN, 2, $1.ast, opr($2, 1, $3.ast));
                                               break;
 
                                             case DIVIDE_SIGN:
@@ -754,7 +754,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                                 // return 1;
                                               }
                                               $$.valueType = REAL_TYPE;
-                                              $$.ast = opr(DIVIDE_SIGN, 2, $1.ast, $3.ast);
+                                              $$.ast = opr(DIVIDE_SIGN, 2, $1.ast, opr($2, 1, $3.ast));
                                               break;
 
                                             case MULTIPLY_SIGN:
@@ -763,12 +763,12 @@ term: additional_factors factor { if (!$1.isNull) {
                                                 // return 1;
                                               }
                                               $$.valueType = ($3.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
-                                              $$.ast = opr(MULTIPLY_SIGN, 2, $1.ast, $3.ast);
+                                              $$.ast = opr(MULTIPLY_SIGN, 2, $1.ast, opr($2, 1, $3.ast));
                                               break;
                                           }
                                         } else {
                                           $$.valueType = $3.valueType;
-                                          $$.ast = $3.ast;
+                                          $$.ast = opr($2, 1, $3.ast);
                                         } }
     ;
 additional_factors: additional_factors factor multiplication_operator { if (!$1.isNull) {
@@ -1308,9 +1308,11 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
         case GREATER_OR_EQUAL_SIGN:
           s = "[>=]";
           break;
+        case PLUS_SIGN:
         case PLUS_OPERATOR:
           s = "[+]";
           break;
+        case MINUS_SIGN:
         case MINUS_OPERATOR:
           s = "[-]";
           break;

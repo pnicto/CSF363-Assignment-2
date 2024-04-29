@@ -20,7 +20,7 @@ int graphNumber = 0;
   void yyerror();
 
   // graph related declarations
-  typedef enum { CONSTANT, ID, OPERATOR } NodeType;
+  typedef enum { CONSTANT, ID, OPERATOR, TYPE } NodeType;
    enum Type {
     INTEGER_TYPE,
     REAL_TYPE,
@@ -57,6 +57,7 @@ int graphNumber = 0;
       IdentifierNode identifier;
       OperatorNode opr;
     };
+    enum Type t;
   } Node;
 
 
@@ -116,6 +117,7 @@ int graphNumber = 0;
   struct IdentifierList {
     char* identifiers[100];
     int size;
+    Node* ast;
   };
 
   struct NumericValue {
@@ -160,9 +162,15 @@ int graphNumber = 0;
     Node *ast;
   };
 
+  // TODO: This is not used anywhere
   struct ParameterList {
     Node* parameters[100];
     int size;
+  };
+
+  struct ProgpagateValues {
+    char* values[100];
+    int enums[100];
   };
 
   void graphInit(void);
@@ -179,6 +187,7 @@ int graphNumber = 0;
   Node *con(void* value, enum Type type);
   Node *oprList(int oper, int nops, Node** nodes);
   Node *keyword(int oper);
+  Node * type(enum Type type);
 }
 
 %union {
@@ -201,6 +210,7 @@ int graphNumber = 0;
   struct ForControl forControl;
   struct ParameterList parameterList;
   Node* node;
+  struct ProgpagateValues progpagateValues;
 }
 
 // program tokens
@@ -243,7 +253,8 @@ int graphNumber = 0;
 %type <additionalTerm> additional_terms
 %type <forControl> for_control
 
-%type <node> statement simple_statement assignment_statement block statement_part statement_sequence procedure_statement structured_statement if_statement actual_parameter other_actual_parameters actual_parameter_list compound_statement repetitive_statement while_statement for_statement
+%type <node> statement simple_statement assignment_statement block statement_part statement_sequence procedure_statement structured_statement if_statement actual_parameter other_actual_parameters actual_parameter_list compound_statement repetitive_statement while_statement for_statement program declaration_part variable_declaration_part more_variable_declarations variable_declaration
+%type <progpagateValues> program_heading
 
 // Precedence rule for else shift-reduce conflict
 %right THEN ELSE
@@ -251,21 +262,27 @@ int graphNumber = 0;
 %%
 program: program_heading block DOT  {
                                       // printf("valid input\n");
-                                      createAST($2); return 0; }
+                                      $$ = opr(PROGRAM, 4, id($1.values[0]), keyword(SEMICOLON), $2->opr.operands[0], $2->opr.operands[1]);
+                                      createAST($$);
+                                      return 0; }
        ;
-program_heading: PROGRAM IDENTIFIER SEMICOLON { free($2); }
+program_heading: PROGRAM IDENTIFIER SEMICOLON { struct ProgpagateValues progpagateValues;
+                                                progpagateValues.values[0] = $2;
+                                                progpagateValues.enums[0] = PROGRAM;
+                                                progpagateValues.enums[1] = SEMICOLON;
+                                                $$ = progpagateValues; }
                ;
-block: declaration_part statement_part { $$ = $2; }
+block: declaration_part statement_part { $$ = opr(PROGRAM, 2, $1, $2); }
      ;
-declaration_part:
-                | variable_declaration_part
+declaration_part: /* empty */ { $$ = NULL; }
+                | variable_declaration_part { $$ = $1; }
                 ;
 statement_part: BEGINNING statement_sequence END { $$ = $2; }
               ;
-variable_declaration_part: VAR variable_declaration SEMICOLON more_variable_declarations
+variable_declaration_part: VAR variable_declaration SEMICOLON more_variable_declarations { $$ = opr(VAR, 3, $2, keyword(SEMICOLON), $4); }
                          ;
-more_variable_declarations: variable_declaration SEMICOLON more_variable_declarations
-                          |
+more_variable_declarations: variable_declaration SEMICOLON more_variable_declarations { $$ = opr(SEMICOLON, 2, $1, $3);}
+                          | /* empty */ { $$ = NULL; }
                           ;
 variable_declaration: identifier_list COLON type  { for (int i = 0; i < $1.size; i++) {
                                                       int flag = 0;
@@ -291,6 +308,8 @@ variable_declaration: identifier_list COLON type  { for (int i = 0; i < $1.size;
                                                       symbolTable.variables[symbolTable.size].valueHasBeenAssigned = 0;
                                                       symbolTable.variables[symbolTable.size].assignmentIsAllowed = 1;
                                                       symbolTable.size++;
+
+                                                      $$ = opr(COLON, 2, $1.ast, type($3.type));
                                                     } }
                     ;
 identifier_list: IDENTIFIER COMMA identifier_list { int flag = 0;
@@ -317,8 +336,11 @@ identifier_list: IDENTIFIER COMMA identifier_list { int flag = 0;
                                                       for (int i = 0; i < $3.size; i++) {
                                                         $$.identifiers[i+1] = $3.identifiers[i];
                                                       }
-                                                    } }
-               | IDENTIFIER { $$.size = 1; $$.identifiers[0] = $1; }
+                                                    }
+
+                                                    $$.ast = opr(COMMA, 2, id($1), $3.ast);
+                                                  }
+               | IDENTIFIER { $$.size = 1; $$.identifiers[0] = $1; $$.ast = id($1); }
                ;
 type: REAL { $$.type = REAL_TYPE; }
     | INTEGER { $$.type = INTEGER_TYPE; }
@@ -907,7 +929,7 @@ indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN { if (symbolTabl
                                                                   $$.symbolTableIndex = $1.symbolTableIndex;
                                                                   $$.isIndexed = 1;
 
-                                                                  $$.ast = opr('a', 2, id(symbolTable.variables[$1.symbolTableIndex].identifier), $3.ast);
+                                                                  $$.ast = opr('a', 4, id(symbolTable.variables[$1.symbolTableIndex].identifier), keyword(LSQUAREPAREN), $3.ast, keyword(RSQUAREPAREN));
                                                                 }
                 ;
 number: integer_number { $$.type = INTEGER_TYPE; $$.integerValue = $1; }
@@ -1067,7 +1089,6 @@ Node *keyword(int oper) {
   return node;
 }
 
-
 Node *opr(int oper, int nops, ...) {
   va_list ap;
   Node *node;
@@ -1126,6 +1147,17 @@ Node *con(void* value, enum Type type){
   return p;
 }
 
+Node *type(enum Type type) {
+  Node *p;
+
+  if ((p = malloc(sizeof(Node))) == NULL) yyerror("out of memory");
+
+  p->t = type;
+  p->type = TYPE;
+
+  return p;
+}
+
 int createAST(Node *p) {
   int rte, rtm;
 
@@ -1163,6 +1195,25 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case STRING_TYPE:
           sprintf(word, "c(%s)", p->constant.s);
+          break;
+      }
+      break;
+    case TYPE:
+      switch(p->t) {
+        case INTEGER_TYPE:
+          sprintf(word, "type(%s)", "integer");
+          break;
+        case REAL_TYPE:
+          sprintf(word, "type(%s)", "real");
+          break;
+        case CHAR_TYPE:
+          sprintf(word, "type(%s)", "char");
+          break;
+        case BOOLEAN_TYPE:
+          sprintf(word, "type(%s)", "boolean");
+          break;
+        case ARRAY_TYPE:
+          s = "array";
           break;
       }
       break;
@@ -1245,6 +1296,21 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case 'a':
           s = "array";
+          break;
+        case PROGRAM:
+          s = "program";
+          break;
+        case VAR:
+          s = "var";
+          break;
+        case COLON:
+          s = "[:]";
+          break;
+        case LSQUAREPAREN:
+          s = "[";
+          break;
+        case RSQUAREPAREN:
+          s = "]";
           break;
       }
       break;

@@ -247,7 +247,7 @@ int graphNumber = 0;
 %right THEN ELSE
 
 %%
-program: program_heading block DOT  { 
+program: program_heading block DOT  {
                                       // printf("valid input\n");
                                       createAST($2); return 0; }
        ;
@@ -277,7 +277,7 @@ variable_declaration: identifier_list COLON type  { for (int i = 0; i < $1.size;
                                                           // for(int k = i; k < $1.size; k++) {
                                                           //   free($1.identifiers[k]);
                                                           // }
-                                                          
+
                                                           // return 1;
                                                         }
                                                       }
@@ -351,7 +351,7 @@ subrange_type: constant DOTDOT constant { if (!($1.type == INTEGER_TYPE && $3.ty
 
                                           if ($1.integerValue > $3.integerValue) {
                                             printf("Error: array's min index is larger than max index\n");
-                                            / /$1.integerValue = $3.integerValue - 10;
+                                            $1.integerValue = $3.integerValue - 10;
                                             // return 1;
                                           }
 

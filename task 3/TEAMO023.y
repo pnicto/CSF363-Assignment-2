@@ -585,12 +585,12 @@ if_statement: IF expression THEN statement  { if ($2.valueType != BOOLEAN_TYPE) 
                                                 printf("Error: if statement condition must be boolean\n");
                                                 // return 1;
                                               }
-                                              $$ = opr(IF, 2, $2.ast, $4);}
+                                              $$ = opr(IF, 3, $2.ast, keyword(THEN), $4);}
             | IF expression THEN statement ELSE statement { if ($2.valueType != BOOLEAN_TYPE) {
                                                             printf("Error: if statement condition must be boolean\n");
                                                             // return 1;
                                                           }
-                                                           $$ = opr(IF_ELSE, 3, $2.ast, $4, $6);
+                                                           $$ = opr(IF_ELSE, 5, $2.ast, keyword(THEN), $4, keyword(ELSE), $6);
                                                           }
             ;
 expression: simple_expression relational_operator simple_expression { if (!(($1.valueType == INTEGER_TYPE || $1.valueType == REAL_TYPE) && ($3.valueType == INTEGER_TYPE || $3.valueType == REAL_TYPE))) {
@@ -1370,6 +1370,12 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case DOWNTO:
           s = "downto";
+          break;
+        case THEN:
+          s = "then";
+          break;
+        case ELSE:
+          s = "else";
           break;
       }
       break;

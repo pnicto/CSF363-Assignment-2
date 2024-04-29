@@ -20,7 +20,7 @@ int graphNumber = 0;
   void yyerror();
 
   // graph related declarations
-  typedef enum { CONSTANT, ID, OPERATOR, TYPE } NodeType;
+  typedef enum { CONSTANT, ID, OPERATOR, TYPE, CUSTOM } NodeType;
    enum Type {
     INTEGER_TYPE,
     REAL_TYPE,
@@ -51,6 +51,7 @@ int graphNumber = 0;
   } OperatorNode;
 
   typedef struct Node {
+    char* name;
     NodeType type;
     union {
       ConstantNode constant;
@@ -188,6 +189,7 @@ int graphNumber = 0;
   Node *oprList(int oper, int nops, Node** nodes);
   Node *keyword(int oper);
   Node * type(enum Type type);
+  Node *custom(char* name, int nchild, ...);
 }
 
 %union {
@@ -309,8 +311,14 @@ variable_declaration: identifier_list COLON type  { for (int i = 0; i < $1.size;
                                                       symbolTable.variables[symbolTable.size].assignmentIsAllowed = 1;
                                                       symbolTable.size++;
 
+                                                    }
+                                                    if($3.type != ARRAY_TYPE) {
                                                       $$ = opr(COLON, 2, $1.ast, type($3.type));
-                                                    } }
+                                                    } else {
+                                                       Node* typeAst = opr(OF, 2, custom("array", 5, keyword(LSQUAREPAREN), con((void*)(&$3.minIndex), INTEGER_TYPE), keyword(DOTDOT), con((void*)(&$3.maxIndex), INTEGER_TYPE), keyword(RSQUAREPAREN)), type($3.valueType));
+                                                       $$ = opr(COLON, 2, $1.ast, typeAst);
+                                                    }
+                                                  }
                     ;
 identifier_list: IDENTIFIER COMMA identifier_list { int flag = 0;
                                                     for (int i = 0; i < $3.size; i++) {
@@ -1114,6 +1122,25 @@ Node *opr(int oper, int nops, ...) {
   return node;
 }
 
+Node *custom(char* name, int nchild, ...) {
+  va_list ap;
+  Node *node;
+  if ((node = malloc(sizeof(Node) + (nchild - 1) * sizeof(Node *))) == NULL)
+    yyerror("out of memory");
+
+  node->type = CUSTOM;
+  node->opr.nOperands = nchild;
+  node->name = name;
+
+  va_start(ap, nchild);
+  for (int i = 0; i < nchild; i++) {
+    node->opr.operands[i] = va_arg(ap, Node *);
+  }
+  va_end(ap);
+
+  return node;
+}
+
 Node *id(char *name) {
   Node *p;
 
@@ -1188,6 +1215,10 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
   s = word;
 
   switch (p->type) {
+    case CUSTOM:
+      s = p->name;
+      p->type = OPERATOR;
+      break;
     case CONSTANT:
       switch(p->constant.type) {
         case INTEGER_TYPE:
@@ -1317,6 +1348,12 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case RSQUAREPAREN:
           s = "]";
+          break;
+        case OF:
+          s = "of";
+          break;
+        case DOTDOT:
+          s = "..";
           break;
       }
       break;

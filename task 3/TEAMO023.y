@@ -499,7 +499,7 @@ while_statement: WHILE expression DO statement  { if ($2.valueType != BOOLEAN_TY
                ;
 for_statement: for_control DO statement { symbolTable.variables[$1.controlIndex].valueHasBeenAssigned = $1.oldControlAssignmentStatus;
                                           symbolTable.variables[$1.controlIndex].assignmentIsAllowed = 1;
-                                          $$ = opr($1.ast->opr.opr, 4, $1.ast->opr.operands[0], $1.ast->opr.operands[1],$1.ast->opr.operands[2], $3);
+                                          $$ = opr($1.ast->opr.opr, 2, $1.ast->opr.operands[0], $3);
                                         }
              ;
 for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIndex = -1;
@@ -539,7 +539,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                   symbolTable.variables[variableIndex].assignmentIsAllowed = 0;
 
                                                                   Node* assignment = opr(ASSIGNMENT, 2, id(symbolTable.variables[variableIndex].identifier), $4.ast);
-                                                                  $$.ast = opr(FOR_TO, 3, assignment, keyword(TO), $6.ast);
+                                                                  $$.ast = opr(FOR_TO, 1, opr(TO, 2, assignment, $6.ast));
                                                                 }
            | FOR IDENTIFIER ASSIGNMENT expression DOWNTO expression { int variableIndex = -1;
                                                                       for (int i = 0; i < symbolTable.size; i++) {
@@ -578,7 +578,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                       symbolTable.variables[variableIndex].assignmentIsAllowed = 0;
 
                                                                       Node* assignment = opr(ASSIGNMENT, 2, id(symbolTable.variables[variableIndex].identifier), $4.ast);
-                                                                      $$.ast = opr(FOR_DOWNTO, 3, assignment, keyword(DOWNTO), $6.ast);
+                                                                      $$.ast = opr(FOR_DOWNTO, 1, opr(DOWNTO, 2, assignment, $6.ast));
                                                                     }
            ;
 if_statement: IF expression THEN statement  { if ($2.valueType != BOOLEAN_TYPE) {

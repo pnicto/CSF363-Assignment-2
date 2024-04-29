@@ -464,15 +464,21 @@ procedure_statement: READ LPAREN variable RPAREN  { if (symbolTable.variables[$3
 
 
                                                     if($3.isIndexed){
-                                                      $$ = opr(READ, 1, $3.ast);
+                                                      $$ = opr(READ, 3, keyword(LPAREN), $3.ast, keyword(RPAREN));
                                                     } else {
-                                                      $$ = opr(READ, 1, id(symbolTable.variables[$3.symbolTableIndex].identifier));
+                                                      $$ = opr(READ, 3, keyword(LPAREN), id(symbolTable.variables[$3.symbolTableIndex].identifier), keyword(RPAREN));
                                                     }
 
                                                     symbolTable.variables[$3.symbolTableIndex].valueHasBeenAssigned = 1; }
-                   | WRITE actual_parameter_list { $$ = opr(WRITE, 1, $2); }
+                   | WRITE actual_parameter_list { $$ = opr(WRITE, 3, keyword(LPAREN), $2, keyword(RPAREN)); }
                    ;
-actual_parameter_list: LPAREN actual_parameter other_actual_parameters RPAREN { $$ = opr(COMMA, 2, $2, $3); }
+actual_parameter_list: LPAREN actual_parameter other_actual_parameters RPAREN {
+                                                                                  if($3 != NULL) {
+                                                                                    $$ = opr(LPAREN, 2, $2, $3);
+                                                                                  } else {
+                                                                                    $$ = $2;
+                                                                                  }
+                                                                              }
                      ;
 other_actual_parameters: COMMA actual_parameter other_actual_parameters { $$ = opr(COMMA, 2, $2, $3); }
                        | { $$ = NULL; }
@@ -1376,6 +1382,12 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case ELSE:
           s = "else";
+          break;
+        case LPAREN:
+          s = "(";
+          break;
+        case RPAREN:
+          s = ")";
           break;
       }
       break;

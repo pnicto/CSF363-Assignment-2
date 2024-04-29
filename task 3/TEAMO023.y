@@ -345,7 +345,6 @@ identifier_list: IDENTIFIER COMMA identifier_list { int flag = 0;
                                                         $$.identifiers[i+1] = $3.identifiers[i];
                                                       }
                                                     }
-
                                                     $$.ast = opr(COMMA, 2, id($1), $3.ast);
                                                   }
                | IDENTIFIER { $$.size = 1; $$.identifiers[0] = $1; $$.ast = id($1); }
@@ -395,7 +394,7 @@ statement_sequence: statement SEMICOLON statement_sequence { $$ = opr(SEMICOLON,
                   | { $$ = NULL; }
                   ;
 statement: simple_statement { $$ = $1; }
-         | structured_statement
+         | structured_statement { $$ = $1; }
          ;
 simple_statement: assignment_statement { $$ = $1; }
                 | procedure_statement { $$ = $1; }
@@ -485,7 +484,7 @@ structured_statement: compound_statement { $$ = $1; }
                     | repetitive_statement
                     | if_statement { $$ = $1; }
                     ;
-compound_statement: BEGINNING statement_sequence END { $$ = $2; }
+compound_statement: BEGINNING statement_sequence END { $$ = custom("compound", 3, keyword(BEGINNING), $2, keyword(END)); }
                   ;
 repetitive_statement: while_statement { $$ = $1; }
                     | for_statement { $$ = $1; }
@@ -495,7 +494,7 @@ while_statement: WHILE expression DO statement  { if ($2.valueType != BOOLEAN_TY
                                                     // return 1;
                                                   }
 
-                                                  $$ = opr(WHILE, 2, $2.ast, $4);
+                                                  $$ = opr(WHILE, 3, $2.ast, keyword(DO), $4);
                                                 }
                ;
 for_statement: for_control DO statement { symbolTable.variables[$1.controlIndex].valueHasBeenAssigned = $1.oldControlAssignmentStatus;
@@ -1362,6 +1361,9 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
           break;
         case DOT:
           s = "[.]";
+          break;
+        case DO:
+          s = "do";
           break;
       }
       break;

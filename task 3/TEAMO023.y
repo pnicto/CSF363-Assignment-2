@@ -177,6 +177,8 @@ int graphNumber = 0;
   Node *opr(int oper, int nops, ...);
   Node *id(char* name);
   Node *con(void* value, enum Type type);
+  Node *oprList(int oper, int nops, Node** nodes);
+  Node *keyword(int oper);
 }
 
 %union {
@@ -1035,6 +1037,34 @@ int main(int argc, char *argv[]) {
 
 void yyerror() {
   printf("syntax error\n");
+}
+
+Node *oprList(int oper, int nops, Node** nodes) {
+  Node *node;
+  if ((node = malloc(sizeof(Node) + (nops - 1) * sizeof(Node *))) == NULL)
+    yyerror("out of memory");
+
+  node->type = OPERATOR;
+  node->opr.opr = oper;
+  node->opr.nOperands = nops;
+
+  for (int i = 0; i < nops; i++) {
+    node->opr.operands[i] = nodes[i];
+  }
+
+  return node;
+}
+
+Node *keyword(int oper) {
+  Node *node;
+  if ((node = malloc(sizeof(Node))) == NULL)
+    yyerror("out of memory");
+
+  node->type = OPERATOR;
+  node->opr.opr = oper;
+  node ->opr.nOperands = 0;
+
+  return node;
 }
 
 

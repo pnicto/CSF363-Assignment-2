@@ -382,6 +382,12 @@ procedure_statement: READ LPAREN variable RPAREN  { if (symbolTable.variables[$3
                                                       printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$3.symbolTableIndex].identifier);
                                                       return 1;
                                                     }
+
+                                                    if (symbolTable.variables[$3.symbolTableIndex].typeInfo.type == ARRAY_TYPE && !$3.isIndexed) {
+                                                      printf("Error: can't assign to array variable %s directly\n", symbolTable.variables[$3.symbolTableIndex].identifier);
+                                                      return 1;
+                                                    }
+
                                                     symbolTable.variables[$3.symbolTableIndex].valueHasBeenAssigned = 1; }
                    | WRITE actual_parameter_list
                    ;

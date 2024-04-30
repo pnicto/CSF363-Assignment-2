@@ -1899,113 +1899,123 @@ int main(int argc, char *argv[]) {
       }
 
       case ASSIGNMENT_STATEMENT: {
-        int symbolTableIndex;
-        for (int i = 0; i < symbolTable.size; i++) {
-          if (strcmp(symbolTable.variables[i].identifier,
-                     threeAddressCode.quadruple[currentLine].result) == 0) {
-            symbolTableIndex = i;
-            break;
-          }
-        }
-
-        if (symbolTable.variables[symbolTableIndex].typeInfo.type !=
-            ARRAY_TYPE) {
-          switch (threeAddressCode.quadruple[currentLine]
-                      .statementInfo.operand1Type) {
-            case INTEGER_TYPE: {
-              int value = getIntOperand(
-                  threeAddressCode.quadruple[currentLine].operand1);
-
-              assignInteger(threeAddressCode.quadruple[currentLine].result,
-                            value);
-              break;
-            }
-
-            case REAL_TYPE: {
-              if (threeAddressCode.quadruple[currentLine]
-                      .statementInfo.operand2Type == REAL_TYPE) {
-                float value = getRealOperand(
-                    threeAddressCode.quadruple[currentLine].operand1);
-
-                assignReal(threeAddressCode.quadruple[currentLine].result,
-                           value);
-              } else {
-                int value = getIntOperand(
-                    threeAddressCode.quadruple[currentLine].operand1);
-
-                assignReal(threeAddressCode.quadruple[currentLine].result,
-                           value);
-              }
-              break;
-            }
-
-            case BOOLEAN_TYPE: {
-              int value = getIntOperand(
-                  threeAddressCode.quadruple[currentLine].operand1);
-
-              assignInteger(threeAddressCode.quadruple[currentLine].result,
-                            value);
-              break;
-            }
-
-            case CHAR_TYPE: {
-              char value = getCharOperand(
-                  threeAddressCode.quadruple[currentLine].operand1);
-
-              assignChar(threeAddressCode.quadruple[currentLine].result, value);
-              break;
-            }
-          }
+        if (threeAddressCode.quadruple[currentLine].result[0] == '#') {
+          int tempNo;
+          sscanf(threeAddressCode.quadruple[currentLine].result, "#T%d",
+                 &tempNo);
+          tempTable.temps[tempNo].booleanValue =
+              getIntOperand(threeAddressCode.quadruple[currentLine].operand1);
         } else {
-          int index =
-              getIntOperand(threeAddressCode.quadruple[currentLine].operand2) -
-              symbolTable.variables[symbolTableIndex].typeInfo.minIndex;
-
-          switch (threeAddressCode.quadruple[currentLine]
-                      .statementInfo.operand1Type) {
-            case INTEGER_TYPE: {
-              int value = getIntOperand(
-                  threeAddressCode.quadruple[currentLine].operand1);
-
-              ((int*)symbolTable.variables[symbolTableIndex]
-                   .arrayAddress)[index] = value;
+          int symbolTableIndex;
+          for (int i = 0; i < symbolTable.size; i++) {
+            if (strcmp(symbolTable.variables[i].identifier,
+                       threeAddressCode.quadruple[currentLine].result) == 0) {
+              symbolTableIndex = i;
               break;
             }
+          }
 
-            case REAL_TYPE: {
-              if (threeAddressCode.quadruple[currentLine]
-                      .statementInfo.operand2Type == REAL_TYPE) {
-                float value = getRealOperand(
-                    threeAddressCode.quadruple[currentLine].operand1);
-
-                ((float*)symbolTable.variables[symbolTableIndex]
-                     .arrayAddress)[index] = value;
-              } else {
+          if (symbolTable.variables[symbolTableIndex].typeInfo.type !=
+              ARRAY_TYPE) {
+            switch (threeAddressCode.quadruple[currentLine]
+                        .statementInfo.operand1Type) {
+              case INTEGER_TYPE: {
                 int value = getIntOperand(
                     threeAddressCode.quadruple[currentLine].operand1);
 
-                ((float*)symbolTable.variables[symbolTableIndex]
-                     .arrayAddress)[index] = value;
+                assignInteger(threeAddressCode.quadruple[currentLine].result,
+                              value);
+                break;
               }
-              break;
+
+              case REAL_TYPE: {
+                if (threeAddressCode.quadruple[currentLine]
+                        .statementInfo.operand2Type == REAL_TYPE) {
+                  float value = getRealOperand(
+                      threeAddressCode.quadruple[currentLine].operand1);
+
+                  assignReal(threeAddressCode.quadruple[currentLine].result,
+                             value);
+                } else {
+                  int value = getIntOperand(
+                      threeAddressCode.quadruple[currentLine].operand1);
+
+                  assignReal(threeAddressCode.quadruple[currentLine].result,
+                             value);
+                }
+                break;
+              }
+
+              case BOOLEAN_TYPE: {
+                int value = getIntOperand(
+                    threeAddressCode.quadruple[currentLine].operand1);
+
+                assignInteger(threeAddressCode.quadruple[currentLine].result,
+                              value);
+                break;
+              }
+
+              case CHAR_TYPE: {
+                char value = getCharOperand(
+                    threeAddressCode.quadruple[currentLine].operand1);
+
+                assignChar(threeAddressCode.quadruple[currentLine].result,
+                           value);
+                break;
+              }
             }
+          } else {
+            int index =
+                getIntOperand(
+                    threeAddressCode.quadruple[currentLine].operand2) -
+                symbolTable.variables[symbolTableIndex].typeInfo.minIndex;
 
-            case BOOLEAN_TYPE: {
-              int value = getIntOperand(
-                  threeAddressCode.quadruple[currentLine].operand1);
+            switch (threeAddressCode.quadruple[currentLine]
+                        .statementInfo.operand1Type) {
+              case INTEGER_TYPE: {
+                int value = getIntOperand(
+                    threeAddressCode.quadruple[currentLine].operand1);
 
-              ((int*)symbolTable.variables[symbolTableIndex]
-                   .arrayAddress)[index] = value;
-              break;
-            }
+                ((int*)symbolTable.variables[symbolTableIndex]
+                     .arrayAddress)[index] = value;
+                break;
+              }
 
-            case CHAR_TYPE: {
-              char value = getCharOperand(
-                  threeAddressCode.quadruple[currentLine].operand1);
+              case REAL_TYPE: {
+                if (threeAddressCode.quadruple[currentLine]
+                        .statementInfo.operand2Type == REAL_TYPE) {
+                  float value = getRealOperand(
+                      threeAddressCode.quadruple[currentLine].operand1);
 
-              ((char*)symbolTable.variables[symbolTableIndex]
-                   .arrayAddress)[index] = value;
-              break;
+                  ((float*)symbolTable.variables[symbolTableIndex]
+                       .arrayAddress)[index] = value;
+                } else {
+                  int value = getIntOperand(
+                      threeAddressCode.quadruple[currentLine].operand1);
+
+                  ((float*)symbolTable.variables[symbolTableIndex]
+                       .arrayAddress)[index] = value;
+                }
+                break;
+              }
+
+              case BOOLEAN_TYPE: {
+                int value = getIntOperand(
+                    threeAddressCode.quadruple[currentLine].operand1);
+
+                ((int*)symbolTable.variables[symbolTableIndex]
+                     .arrayAddress)[index] = value;
+                break;
+              }
+
+              case CHAR_TYPE: {
+                char value = getCharOperand(
+                    threeAddressCode.quadruple[currentLine].operand1);
+
+                ((char*)symbolTable.variables[symbolTableIndex]
+                     .arrayAddress)[index] = value;
+                break;
+              }
             }
           }
         }

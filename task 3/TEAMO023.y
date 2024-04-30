@@ -1236,6 +1236,7 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
   switch (p->type) {
     case CUSTOM:
       s = p->name;
+      p->type = OPERATOR;
       break;
     case CONSTANT:
       switch(p->constant.type) {

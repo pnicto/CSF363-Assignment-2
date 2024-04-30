@@ -616,7 +616,7 @@ if_statement: IF expression THEN statement  { if ($2.type != BOOLEAN_TYPE) {
                                               char label[50], boolCondition[50];
                                               sprintf(label, "Label%d", labelCount++);
                                               sprintf(boolCondition, "%s = 0", $2.temp);
-                                              addQuadruple($$.quadruple, &$$.quadrupleSize, $2.temp, "goto", label, "if", "");
+                                              addQuadruple($$.quadruple, &$$.quadrupleSize, boolCondition, "goto", label, "if", "");
                                               addLabelRequest = 1;
                                               strcpy(requestedLabel, label);
 

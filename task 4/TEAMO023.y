@@ -613,8 +613,9 @@ if_statement: IF expression THEN statement  { if ($2.type != BOOLEAN_TYPE) {
                                                 $$.quadruple[i] = $2.quadruple[i];
                                               }
                                               
-                                              char label[50];
+                                              char label[50], boolCondition[50];
                                               sprintf(label, "Label%d", labelCount++);
+                                              sprintf(boolCondition, "%s = 0", $2.temp);
                                               addQuadruple($$.quadruple, &$$.quadrupleSize, $2.temp, "goto", label, "if", "");
                                               addLabelRequest = 1;
                                               strcpy(requestedLabel, label);
@@ -638,10 +639,11 @@ if_statement: IF expression THEN statement  { if ($2.type != BOOLEAN_TYPE) {
                                                             $$.quadruple[i] = $2.quadruple[i];
                                                           }
                                                           
-                                                          char label1[50], label2[50];
+                                                          char label1[50], label2[50], boolCondition[50];
                                                           sprintf(label1, "Label%d", labelCount++);
                                                           sprintf(label2, "Label%d", labelCount++);
-                                                          addQuadruple($$.quadruple, &$$.quadrupleSize, $2.temp, "goto", label1, "if", "");
+                                                          sprintf(boolCondition, "%s = 0", $2.temp);
+                                                          addQuadruple($$.quadruple, &$$.quadrupleSize, boolCondition, "goto", label1, "if", "");
 
                                                           if ($4.quadrupleSize > 0) {
                                                             strcpy($$.quadruple[$$.quadrupleSize - 1].label, $4.quadruple[0].label);
@@ -666,8 +668,7 @@ if_statement: IF expression THEN statement  { if ($2.type != BOOLEAN_TYPE) {
                                                           strcpy(requestedLabel, label2);
                                                           
                                                           if ($6.quadrupleSize > 0) {
-                                                            strcpy($$.quadruple[$$.quadrupleSize - 1].label, label1);
-                                                            strcpy($6.quadruple[0].label, "");
+                                                            strcpy($6.quadruple[0].label, label1);
 
                                                             if ($6.quadrupleSize > 1 && strcmp($6.quadruple[$6.quadrupleSize - 2].result, "goto") == 0) {
                                                               strcpy($6.quadruple[$6.quadrupleSize - 2].operand1, label2);

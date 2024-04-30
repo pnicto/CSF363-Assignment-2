@@ -190,6 +190,7 @@ int graphNumber = 0;
   Node *keyword(int oper);
   Node * type(enum Type type);
   Node *custom(char* name, int nchild, ...);
+  void freeNode(Node* p);
 }
 
 %union {
@@ -1212,9 +1213,10 @@ int createAST(Node *p) {
 void freeNode(Node* p) {
   if(!p) return;
 
-  for (int i = 0; i < p->opr.nOperands; i++) {
-    freeNode(p->opr.operands[i]);
-  }
+  if(p->type == CUSTOM || p->type == OPERATOR)
+    for (int i = 0; i < p->opr.nOperands; i++) {
+      freeNode(p->opr.operands[i]);
+    }
 
   free(p);
 }
@@ -1236,7 +1238,6 @@ void drawNode(Node *p, int c, int l, int *ce, int *cm) {
   switch (p->type) {
     case CUSTOM:
       s = p->name;
-      p->type = OPERATOR;
       break;
     case CONSTANT:
       switch(p->constant.type) {

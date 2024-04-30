@@ -316,7 +316,7 @@ variable_declaration: identifier_list COLON type  { for (int i = 0; i < $1.size;
                                                     if($3.type != ARRAY_TYPE) {
                                                       $$ = opr(COLON, 2, $1.ast, type($3.type));
                                                     } else {
-                                                       Node* typeAst = opr(OF, 2, custom("array", 5, keyword(LSQUAREPAREN), con((void*)(&$3.minIndex), INTEGER_TYPE), keyword(DOTDOT), con((void*)(&$3.maxIndex), INTEGER_TYPE), keyword(RSQUAREPAREN)), type($3.valueType));
+                                                       Node* typeAst = opr(OF, 2, custom("array", 3, keyword(LSQUAREPAREN), opr(DOTDOT, 2, con((void*)(&$3.minIndex), INTEGER_TYPE), con((void*)(&$3.maxIndex), INTEGER_TYPE)), keyword(RSQUAREPAREN)), type($3.valueType));
                                                        $$ = opr(COLON, 2, $1.ast, typeAst);
                                                     }
                                                   }

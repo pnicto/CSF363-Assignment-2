@@ -266,6 +266,7 @@ program: program_heading block DOT  {
                                       // printf("valid input\n");
                                       $$ = opr(PROGRAM, 7, id($1.values[0]), keyword(SEMICOLON), $2->opr.operands[0], $2->opr.operands[1], $2->opr.operands[2], $2->opr.operands[3], keyword(DOT));
                                       createAST($$);
+                                      freeNode($$);
                                       return 0; }
        ;
 program_heading: PROGRAM IDENTIFIER SEMICOLON { struct ProgpagateValues progpagateValues;
@@ -1206,6 +1207,16 @@ int createAST(Node *p) {
   drawNode(p, 0, 0, &rte, &rtm);
   graphFinish();
   return 0;
+}
+
+void freeNode(Node* p) {
+  if(!p) return;
+
+  for (int i = 0; i < p->opr.nOperands; i++) {
+    freeNode(p->opr.operands[i]);
+  }
+
+  free(p);
 }
 
 void drawNode(Node *p, int c, int l, int *ce, int *cm) {

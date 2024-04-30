@@ -1922,10 +1922,20 @@ int main(int argc, char *argv[]) {
             }
 
             case REAL_TYPE: {
-              float value = getRealOperand(
-                  threeAddressCode.quadruple[currentLine].operand1);
+              if (threeAddressCode.quadruple[currentLine]
+                      .statementInfo.operand2Type == REAL_TYPE) {
+                float value = getRealOperand(
+                    threeAddressCode.quadruple[currentLine].operand1);
 
-              assignReal(threeAddressCode.quadruple[currentLine].result, value);
+                assignReal(threeAddressCode.quadruple[currentLine].result,
+                           value);
+              } else {
+                int value = getIntOperand(
+                    threeAddressCode.quadruple[currentLine].operand1);
+
+                assignReal(threeAddressCode.quadruple[currentLine].result,
+                           value);
+              }
               break;
             }
 
@@ -1963,11 +1973,20 @@ int main(int argc, char *argv[]) {
             }
 
             case REAL_TYPE: {
-              float value = getRealOperand(
-                  threeAddressCode.quadruple[currentLine].operand1);
+              if (threeAddressCode.quadruple[currentLine]
+                      .statementInfo.operand2Type == REAL_TYPE) {
+                float value = getRealOperand(
+                    threeAddressCode.quadruple[currentLine].operand1);
 
-              ((float*)symbolTable.variables[symbolTableIndex]
-                   .arrayAddress)[index] = value;
+                ((float*)symbolTable.variables[symbolTableIndex]
+                     .arrayAddress)[index] = value;
+              } else {
+                int value = getIntOperand(
+                    threeAddressCode.quadruple[currentLine].operand1);
+
+                ((float*)symbolTable.variables[symbolTableIndex]
+                     .arrayAddress)[index] = value;
+              }
               break;
             }
 
@@ -2082,7 +2101,7 @@ int main(int argc, char *argv[]) {
           intOperand2 =
               getIntOperand(threeAddressCode.quadruple[currentLine].operand2);
           assignReal(threeAddressCode.quadruple[currentLine].result,
-                     intOperand1 / intOperand2);
+                     (float)intOperand1 / intOperand2);
         }
 
         currentLine++;
@@ -2351,7 +2370,7 @@ int main(int argc, char *argv[]) {
 
           case CHAR_TYPE: {
             char value;
-            scanf(" %c", &value);
+            scanf("%c", &value);
             assignChar(symbolTable.variables[symbolTableIndex].identifier,
                        value);
             break;
@@ -2394,7 +2413,7 @@ int main(int argc, char *argv[]) {
 
               case CHAR_TYPE: {
                 char value;
-                scanf(" %c", &value);
+                scanf("%c", &value);
 
                 ((char*)symbolTable.variables[symbolTableIndex]
                      .arrayAddress)[index] = value;

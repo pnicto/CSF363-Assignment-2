@@ -518,7 +518,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
 
                                                                   if (variableIndex == -1) {
                                                                     printf("Error: variable %s used before declaration\n", $2);
-                                                                    strcpy(symbolTable.variables[symbolTable.size].identifier, $2);
+                                                                    symbolTable.variables[symbolTable.size].identifier = $2;
                                                                     symbolTable.variables[symbolTable.size].typeInfo.type = INTEGER_TYPE;
                                                                     symbolTable.variables[symbolTable.size].valueHasBeenAssigned = 0;
                                                                     symbolTable.variables[symbolTable.size].assignmentIsAllowed = 1;
@@ -526,8 +526,9 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                     symbolTable.size++;
                                                                     // free($2);
                                                                     // return 1;
+                                                                  } else {
+                                                                    free($2);
                                                                   }
-                                                                  free($2);
 
                                                                   if (symbolTable.variables[variableIndex].typeInfo.type != INTEGER_TYPE) {
                                                                     printf("Error: non ordinal variable %s can't be used as for-loop control\n", symbolTable.variables[variableIndex].identifier);
@@ -557,7 +558,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
 
                                                                       if (variableIndex == -1) {
                                                                         printf("Error: variable %s used before declaration\n", $2);
-                                                                        strcpy(symbolTable.variables[symbolTable.size].identifier, $2);
+                                                                        symbolTable.variables[symbolTable.size].identifier = $2;
                                                                         symbolTable.variables[symbolTable.size].typeInfo.type = INTEGER_TYPE;
                                                                         symbolTable.variables[symbolTable.size].valueHasBeenAssigned = 0;
                                                                         symbolTable.variables[symbolTable.size].assignmentIsAllowed = 1;
@@ -565,8 +566,9 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                         symbolTable.size++;
                                                                         // free($2);
                                                                         // return 1;
+                                                                      } else {
+                                                                        free($2);
                                                                       }
-                                                                      free($2);
 
                                                                       if (symbolTable.variables[variableIndex].typeInfo.type != INTEGER_TYPE) {
                                                                         printf("Error: non ordinal variable %s can't be used as for-loop control\n", symbolTable.variables[variableIndex].identifier);
@@ -920,19 +922,19 @@ variable: IDENTIFIER  { int variableIndex = -1;
 
                         if (variableIndex == -1) {
                           printf("Error: variable %s used before declaration\n", $1);
-                          strcpy(symbolTable.variables[symbolTable.size].identifier, $1);
+                          symbolTable.variables[symbolTable.size].identifier = $1;
                           symbolTable.variables[symbolTable.size].typeInfo.type = INTEGER_TYPE;
                           symbolTable.variables[symbolTable.size].valueHasBeenAssigned = 0;
                           symbolTable.variables[symbolTable.size].assignmentIsAllowed = 1;
                           variableIndex = symbolTable.size;
                           symbolTable.size++;
-                          free($1);
                           // return 1;
+                        } else {
+                          free($1);
                         }
 
                         $$.isIndexed = 0;
-                        $$.symbolTableIndex = variableIndex;
-                        free($1); }
+                        $$.symbolTableIndex = variableIndex; }
         | indexed_variable { $$.ast = $1.ast; }
         ;
 indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN { if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type != ARRAY_TYPE) {

@@ -737,7 +737,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                           switch ($1.multiplicationOperator) {
                                             case AND_SIGN:
                                               printf("Error: can't apply boolean operator on non-boolean value\n");
-                                              // TODO: add to parse tree anyway
+                                              $$.ast = opr(AND_SIGN, 2, $1.ast, opr($2, 1, $3.ast));
                                               // return 1;
                                               break;
 
@@ -827,7 +827,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                 switch ($1.multiplicationOperator) {
                                                                                   case AND_SIGN:
                                                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
-                                                                                    // TODO: add to parse tree anyway
+                                                                                    $$.ast = opr(AND_SIGN, 2, $1.ast, opr($2, 1, $3.ast));
                                                                                     // return 1;
                                                                                     break;
 
@@ -837,7 +837,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                       // return 1;
                                                                                     }
                                                                                     $$.type = INTEGER_TYPE;
-                                                                                    $$.ast = opr(REMAINDER_SIGN, 2, $1.ast, $3.ast);
+                                                                                    $$.ast = opr(REMAINDER_SIGN, 2, $1.ast, opr($2, 1, $3.ast));
                                                                                     break;
 
                                                                                   case DIVIDE_SIGN:
@@ -846,7 +846,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                       // return 1;
                                                                                     }
                                                                                     $$.type = REAL_TYPE;
-                                                                                    $$.ast = opr(DIVIDE_SIGN, 2, $1.ast, $3.ast);
+                                                                                    $$.ast = opr(DIVIDE_SIGN, 2, $1.ast, opr($2, 1, $3.ast));
                                                                                     break;
 
                                                                                   case MULTIPLY_SIGN:
@@ -855,11 +855,12 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                       // return 1;
                                                                                     }
                                                                                     $$.type = ($3.valueType == REAL_TYPE || $1.type == REAL_TYPE) ? REAL_TYPE : INTEGER_TYPE;
-                                                                                    $$.ast = opr(MULTIPLY_SIGN, 2, $1.ast, $3.ast);
+                                                                                    $$.ast = opr(MULTIPLY_SIGN, 2, $1.ast, opr($2, 1, $3.ast));
                                                                                     break;
                                                                                 }
                                                                               } else {
                                                                                 $$.type = $3.valueType;
+                                                                                $$.ast = opr($2, 1, $3.ast);
                                                                               }
 
                                                                               $$.isNull = 0;

@@ -499,6 +499,10 @@ for_statement: for_control DO statement { symbolTable.variables[$1.controlIndex]
                                           }
                                           addQuadruple($$.quadruple, &$$.quadrupleSize, boolCondition, "goto", label, "if", "");
 
+                                          if ($3.quadrupleSize == 0) {
+                                            strcpy($$.quadruple[$$.quadrupleSize - 2].label, label);
+                                          }
+
                                           addLabelRequest = 1;
                                           strcpy(requestedLabel, $1.exitLabel);
                                         }

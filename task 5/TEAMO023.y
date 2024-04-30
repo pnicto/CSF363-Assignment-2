@@ -2516,6 +2516,48 @@ int main(int argc, char *argv[]) {
     }
   }
 
+  printf("\n");
+  printf("|=================================================================================|\n");
+  printf("|                              Symbol Table                                       |\n");
+  printf("|=================================================================================|\n");
+  printf("| Variable                  | Type                     | Value                    |\n");
+  printf("|=================================================================================|\n");
+
+  for(int i = 0; i < symbolTable.size; i++) {
+    switch(symbolTable.variables[i].typeInfo.type) {
+      case INTEGER_TYPE:
+        printf("| %-25s | Integer                  | %-24d |\n", symbolTable.variables[i].identifier, symbolTable.variables[i].integerValue);
+        break;
+      case REAL_TYPE:
+        printf("| %-25s | Real                     | %-24f |\n", symbolTable.variables[i].identifier, symbolTable.variables[i].realValue);
+        break;
+      case BOOLEAN_TYPE:
+        printf("| %-25s | Boolean                  | %-24d |\n", symbolTable.variables[i].identifier, symbolTable.variables[i].booleanValue);
+        break;
+      case CHAR_TYPE:
+        printf("| %-25s | Char                     | %-24d |\n", symbolTable.variables[i].identifier, symbolTable.variables[i].charValue);
+        break;
+      case ARRAY_TYPE:
+        switch(symbolTable.variables[i].typeInfo.valueType) {
+          case INTEGER_TYPE:
+            printf("| %-25s | Array[%2d..%-2d] of Integer | %-24p |\n", symbolTable.variables[i].identifier, symbolTable.variables[i].typeInfo.minIndex, symbolTable.variables[i].typeInfo.maxIndex, symbolTable.variables[i].arrayAddress);
+            break;
+          case REAL_TYPE:
+            printf("| %-25s | Array[%2d..%-2d] of Real    | %-24p |\n", symbolTable.variables[i].identifier, symbolTable.variables[i].typeInfo.minIndex, symbolTable.variables[i].typeInfo.maxIndex, symbolTable.variables[i].arrayAddress);
+            break;
+          case BOOLEAN_TYPE:
+            printf("| %-25s | Array[%2d..%-2d] of Boolean | %-24p |\n", symbolTable.variables[i].identifier, symbolTable.variables[i].typeInfo.minIndex, symbolTable.variables[i].typeInfo.maxIndex, symbolTable.variables[i].arrayAddress);
+            break;
+          case CHAR_TYPE:
+            printf("| %-25s | Array[%2d..%-2d] of Char    | %-24p |\n", symbolTable.variables[i].identifier, symbolTable.variables[i].typeInfo.minIndex, symbolTable.variables[i].typeInfo.maxIndex, symbolTable.variables[i].arrayAddress);
+            break;
+        }
+        break;
+    }
+  }
+
+  printf("|=================================================================================|\n");
+
   // free the identifiers in symbol table
   for (int i = 0; i < symbolTable.size; i++) {
     free(symbolTable.variables[i].identifier);

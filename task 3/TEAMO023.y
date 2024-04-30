@@ -292,7 +292,7 @@ variable_declaration: identifier_list COLON type  { for (int i = 0; i < $1.size;
                                                         if (strcmp($1.identifiers[i], symbolTable.variables[j].identifier) == 0) {
                                                           printf("Error: multiple declarations of variable %s\n", $1.identifiers[i]);
                                                           flag = 1;
-                                                          free($1.identifiers[i]);
+                                                          // free($1.identifiers[i]);
 
                                                           // Free the remaining identifiers not added to symbol table
                                                           // for(int k = i; k < $1.size; k++) {

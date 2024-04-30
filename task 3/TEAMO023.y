@@ -264,8 +264,7 @@ int graphNumber = 0;
 
 %%
 program: program_heading block DOT  {
-                                      // printf("valid input\n");
-                                      $$ = opr(PROGRAM, 7, id($1.values[0]), keyword(SEMICOLON), $2->opr.operands[0], $2->opr.operands[1], $2->opr.operands[2], $2->opr.operands[3], keyword(DOT));
+                                      $$ = opr(PROGRAM, 2, custom($1.values[0], 4, $2->opr.operands[0], $2->opr.operands[1], $2->opr.operands[2], $2->opr.operands[3]), keyword(SEMICOLON));
                                       createAST($$);
                                       freeNode($$);
                                       return 0; }

@@ -2286,7 +2286,7 @@ int main(int argc, char *argv[]) {
       case NOT_SIGN: {
         assignInteger(
             threeAddressCode.quadruple[currentLine].result,
-            !getIntOperand(threeAddressCode.quadruple[currentLine].operand1));
+            !getIntOperand(threeAddressCode.quadruple[currentLine].operand2));
 
         currentLine++;
         break;

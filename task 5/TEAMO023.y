@@ -2380,7 +2380,7 @@ int main(int argc, char *argv[]) {
 
           case CHAR_TYPE: {
             char value;
-            scanf("%c", &value);
+            scanf(" %c", &value);
             assignChar(symbolTable.variables[symbolTableIndex].identifier,
                        value);
             break;
@@ -2423,7 +2423,7 @@ int main(int argc, char *argv[]) {
 
               case CHAR_TYPE: {
                 char value;
-                scanf("%c", &value);
+                scanf(" %c", &value);
 
                 ((char*)symbolTable.variables[symbolTableIndex]
                      .arrayAddress)[index] = value;

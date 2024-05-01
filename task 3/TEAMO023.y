@@ -387,7 +387,7 @@ subrange_type: constant DOTDOT constant { if (!($1.type == INTEGER_TYPE && $3.ty
 
                                           if ($1.integerValue > $3.integerValue) {
                                             printf("Error: array's min index is larger than max index\n");
-                                            $1.integerValue = $3.integerValue - 10;
+                                            // $1.integerValue = $3.integerValue - 10;
                                             // return 1;
                                           }
 

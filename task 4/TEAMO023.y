@@ -86,19 +86,20 @@ struct SymbolTable symbolTable;
     int maxIndex;
   };
 
-  struct VariableInfo {
-    int symbolTableIndex;
-    int isIndexed;
-    char indexExpressionTemp[50];
-  };
-
-
   struct Quadruple {
     char operator[5];
     char operand1[50];
     char operand2[50];
     char result[50];
     char label[50];
+  };
+
+  struct VariableInfo {
+    int symbolTableIndex;
+    int isIndexed;
+    char indexExpressionTemp[50];
+    struct Quadruple quadruple[20];
+    int quadrupleSize;
   };
 
   struct AdditionalFactor {
@@ -210,7 +211,7 @@ struct SymbolTable symbolTable;
 %right THEN ELSE
 
 %%
-program: program_heading block DOT  { 
+program: program_heading block DOT  {
                                     //  printf("Quad has %d rows\n", $2.quadrupleSize);
                                      displayQuadruple($2.quadruple, $2.quadrupleSize);
                                      if (addLabelRequest) {
@@ -266,7 +267,7 @@ identifier_list: IDENTIFIER COMMA identifier_list { for (int i = 0; i < $3.size;
                                                         return 1;
                                                       }
                                                     }
-                                                    
+
                                                     $$.size = 1 + $3.size;
                                                     $$.identifiers[0] = $1;
                                                     for (int i = 0; i < $3.size; i++) {
@@ -284,7 +285,7 @@ array_type: ARRAY LSQUAREPAREN subrange_type RSQUAREPAREN OF type { if($6.type =
                                                                       printf("Error: array element type can't be another array\n");
                                                                       return 1;
                                                                     }
-                                                                    
+
                                                                     $$.type = ARRAY_TYPE;
                                                                     $$.valueType = $6.type;
                                                                     $$.minIndex = $3.minIndex;
@@ -299,7 +300,7 @@ subrange_type: constant DOTDOT constant { if (!($1.type == INTEGER_TYPE && $3.ty
                                             printf("Error: array's min index is larger than max index\n");
                                             return 1;
                                           }
-                                          
+
                                           $$.minIndex = $1.integerValue;
                                           $$.maxIndex = $3.integerValue; }
              ;
@@ -323,16 +324,19 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                           printf("Error: can't assign to array variable %s directly\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                           return 1;
                                                         }
-                                                        
+
                                                         if (symbolTable.variables[$1.symbolTableIndex].assignmentIsAllowed == 0) {
                                                           printf("Error: can't assign to loop control variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                           return 1;
                                                         }
 
-                                                        for (int i = 0; i < $3.quadrupleSize; i++) {
-                                                          $$.quadruple[i] = $3.quadruple[i];
+                                                        for (int i = 0; i < $1.quadrupleSize; i++) {
+                                                          $$.quadruple[i] = $1.quadruple[i];
                                                         }
-                                                        $$.quadrupleSize = $3.quadrupleSize;
+                                                        for (int i = 0; i < $3.quadrupleSize; i++) {
+                                                          $$.quadruple[$1.quadrupleSize + i] = $3.quadruple[i];
+                                                        }
+                                                        $$.quadrupleSize = $1.quadrupleSize + $3.quadrupleSize;
 
                                                         if (!$1.isIndexed) {
                                                           if (!(symbolTable.variables[$1.symbolTableIndex].typeInfo.type == $3.type || (symbolTable.variables[$1.symbolTableIndex].typeInfo.type == REAL_TYPE && $3.type == INTEGER_TYPE))) {
@@ -352,7 +356,10 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                           addQuadruple($$.quadruple, &$$.quadrupleSize, $3.temp, "", "", varIdentifier, "");
                                                         }
                                                         symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1; }
-                    | variable ASSIGNMENT char  { $$.quadrupleSize = 0;
+                    | variable ASSIGNMENT char  { for (int i = 0; i < $1.quadrupleSize; i++) {
+                                                    $$.quadruple[i] = $1.quadruple[i];
+                                                  }
+                                                  $$.quadrupleSize = $1.quadrupleSize;
 
                                                   if (!$1.isIndexed) {
                                                     if (symbolTable.variables[$1.symbolTableIndex].typeInfo.type != CHAR_TYPE) {
@@ -361,7 +368,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                     }
 
                                                     char charLiteral[50];
-                                                    sprintf(charLiteral, "\"%c\"", $3[1]);
+                                                    sprintf(charLiteral, "\"%c\"", $3[0]);
                                                     addQuadruple($$.quadruple, &$$.quadrupleSize, charLiteral, "", "", symbolTable.variables[$1.symbolTableIndex].identifier, "");
                                                   } else {
                                                     if (symbolTable.variables[$1.symbolTableIndex].typeInfo.valueType != CHAR_TYPE) {
@@ -372,7 +379,7 @@ assignment_statement: variable ASSIGNMENT expression  { if (symbolTable.variable
                                                     char varIdentifier[50];
                                                     sprintf(varIdentifier, "%s[%s]", symbolTable.variables[$1.symbolTableIndex].identifier, $1.indexExpressionTemp);
                                                     char charLiteral[50];
-                                                    sprintf(charLiteral, "\"%c\"", $3[1]);
+                                                    sprintf(charLiteral, "\"%c\"", $3[0]);
                                                     addQuadruple($$.quadruple, &$$.quadrupleSize, charLiteral, "", "", varIdentifier, "");
                                                   }
                                                   symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned = 1;
@@ -463,7 +470,7 @@ while_statement: WHILE expression DO statement  { if ($2.type != BOOLEAN_TYPE) {
                                                     $$.quadruple[$$.quadrupleSize + i] = $4.quadruple[i];
                                                   }
                                                   $$.quadrupleSize += $4.quadrupleSize;
-                                                  
+
                                                   addQuadruple($$.quadruple, &$$.quadrupleSize, startLabel, "", "", "goto", "");
                                                   addLabelRequest = 1;
                                                   strcpy(requestedLabel, endLabel);
@@ -471,7 +478,7 @@ while_statement: WHILE expression DO statement  { if ($2.type != BOOLEAN_TYPE) {
                ;
 for_statement: for_control DO statement { symbolTable.variables[$1.controlIndex].valueHasBeenAssigned = $1.oldControlAssignmentStatus;
                                           symbolTable.variables[$1.controlIndex].assignmentIsAllowed = 1;
-                                          
+
                                           $$.quadrupleSize = $1.quadrupleSize;
                                           for (int i = 0; i < $1.quadrupleSize; i++) {
                                             $$.quadruple[i] = $1.quadruple[i];
@@ -521,12 +528,12 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                     return 1;
                                                                   }
                                                                   free($2);
-                                                                  
+
                                                                   if (symbolTable.variables[variableIndex].typeInfo.type != INTEGER_TYPE) {
                                                                     printf("Error: non ordinal variable %s can't be used as for-loop control\n", symbolTable.variables[variableIndex].identifier);
                                                                     return 1;
                                                                   }
-                                                                  
+
                                                                   if ($4.type != INTEGER_TYPE || $6.type != INTEGER_TYPE) {
                                                                     printf("Error: can't use non integral expression for for-loop control\n");
                                                                     return 1;
@@ -551,7 +558,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                   $$.quadrupleSize += $6.quadrupleSize;
                                                                   strcpy($$.checkTemp, $6.temp);
                                                                   $$.isDownTo = 0;
-                                                                  
+
                                                                   $$.oldControlAssignmentStatus = symbolTable.variables[variableIndex].valueHasBeenAssigned;
                                                                   $$.controlIndex = variableIndex;
                                                                   symbolTable.variables[variableIndex].valueHasBeenAssigned = 1;
@@ -570,12 +577,12 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                         return 1;
                                                                       }
                                                                       free($2);
-                                                                      
+
                                                                       if (symbolTable.variables[variableIndex].typeInfo.type != INTEGER_TYPE) {
                                                                         printf("Error: non ordinal variable %s can't be used as for-loop control\n", symbolTable.variables[variableIndex].identifier);
                                                                         return 1;
                                                                       }
-                                                                      
+
                                                                       if ($4.type != INTEGER_TYPE || $6.type != INTEGER_TYPE) {
                                                                         printf("Error: can't use non integral expression for for-loop control\n");
                                                                         return 1;
@@ -587,7 +594,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                       }
 
                                                                       addQuadruple($$.quadruple, &$$.quadrupleSize, $4.temp, "", "", symbolTable.variables[variableIndex].identifier, "");
-                                                                  
+
                                                                       char label[50], boolCondition[50];
                                                                       sprintf(label, "Label%d", labelCount++);
                                                                       sprintf(boolCondition, "%s < %s", symbolTable.variables[variableIndex].identifier, $6.temp);
@@ -601,7 +608,7 @@ for_control: FOR IDENTIFIER ASSIGNMENT expression TO expression { int variableIn
                                                                       $$.quadrupleSize += $6.quadrupleSize;
                                                                       strcpy($$.checkTemp, $6.temp);
                                                                       $$.isDownTo = 1;
-                                                                      
+
                                                                       $$.oldControlAssignmentStatus = symbolTable.variables[variableIndex].valueHasBeenAssigned;
                                                                       $$.controlIndex = variableIndex;
                                                                       symbolTable.variables[variableIndex].valueHasBeenAssigned = 1;
@@ -611,12 +618,12 @@ if_statement: IF expression THEN statement  { if ($2.type != BOOLEAN_TYPE) {
                                                 printf("Error: if statement condition must be boolean\n");
                                                 return 1;
                                               }
-                                              
+
                                               $$.quadrupleSize = $2.quadrupleSize;
                                               for (int i = 0; i < $2.quadrupleSize; i++) {
                                                 $$.quadruple[i] = $2.quadruple[i];
                                               }
-                                              
+
                                               char label[50], boolCondition[50];
                                               sprintf(label, "Label%d", labelCount++);
                                               sprintf(boolCondition, "%s = 0", $2.temp);
@@ -637,12 +644,12 @@ if_statement: IF expression THEN statement  { if ($2.type != BOOLEAN_TYPE) {
                                                             printf("Error: if statement condition must be boolean\n");
                                                             return 1;
                                                           }
-                                                          
+
                                                           $$.quadrupleSize = $2.quadrupleSize;
                                                           for (int i = 0; i < $2.quadrupleSize; i++) {
                                                             $$.quadruple[i] = $2.quadruple[i];
                                                           }
-                                                          
+
                                                           char label1[50], label2[50], boolCondition[50];
                                                           sprintf(label1, "Label%d", labelCount++);
                                                           sprintf(label2, "Label%d", labelCount++);
@@ -666,11 +673,11 @@ if_statement: IF expression THEN statement  { if ($2.type != BOOLEAN_TYPE) {
                                                             $$.quadruple[$$.quadrupleSize + i] = $4.quadruple[i];
                                                           }
                                                           $$.quadrupleSize += $4.quadrupleSize;
-                                                          
+
                                                           addQuadruple($$.quadruple, &$$.quadrupleSize, label2, "", "", "goto", "");
                                                           addLabelRequest = 1;
                                                           strcpy(requestedLabel, label2);
-                                                          
+
                                                           if ($6.quadrupleSize > 0) {
                                                             strcpy($6.quadruple[0].label, label1);
 
@@ -678,7 +685,7 @@ if_statement: IF expression THEN statement  { if ($2.type != BOOLEAN_TYPE) {
                                                               strcpy($6.quadruple[$6.quadrupleSize - 2].operand1, label2);
                                                             }
                                                           }
-                                                          
+
                                                           for (int i = 0; i < $6.quadrupleSize; i++) {
                                                             $$.quadruple[$$.quadrupleSize + i] = $6.quadruple[i];
                                                           }
@@ -696,7 +703,7 @@ expression: simple_expression relational_operator simple_expression { if (!(($1.
                                                                         case EQUAL_SIGN:
                                                                           sprintf(boolCondition, "%s = %s", $1.temp, $3.temp);
                                                                           break;
-                                                                        
+
                                                                         case NOT_EQUAL_SIGN:
                                                                           sprintf(boolCondition, "%s <> %s", $1.temp, $3.temp);
                                                                           break;
@@ -708,11 +715,11 @@ expression: simple_expression relational_operator simple_expression { if (!(($1.
                                                                         case LESS_OR_EQUAL_SIGN:
                                                                           sprintf(boolCondition, "%s <= %s", $1.temp, $3.temp);
                                                                           break;
-                                                                        
+
                                                                         case GREATER_SIGN:
                                                                           sprintf(boolCondition, "%s > %s", $1.temp, $3.temp);
                                                                           break;
-                                                                        
+
                                                                         case GREATER_OR_EQUAL_SIGN:
                                                                           sprintf(boolCondition, "%s >= %s", $1.temp, $3.temp);
                                                                           break;
@@ -729,14 +736,14 @@ expression: simple_expression relational_operator simple_expression { if (!(($1.
                                                                       for (int i = 0; i < $3.quadrupleSize; i++) {
                                                                         $$.quadruple[$1.quadrupleSize + i] = $3.quadruple[i];
                                                                       }
-                                                                      
+
                                                                       addQuadruple($$.quadruple, &$$.quadrupleSize, boolCondition, "goto", label1, "if", "");
                                                                       addQuadruple($$.quadruple, &$$.quadrupleSize, "0", "", "", $$.temp, "");
                                                                       addQuadruple($$.quadruple, &$$.quadrupleSize, label2, "", "", "goto", "");
                                                                       addQuadruple($$.quadruple, &$$.quadrupleSize, "1", "", "", $$.temp, label1);
                                                                       addLabelRequest = 1;
                                                                       strcpy(requestedLabel, label2);
-                                                                      
+
                                                                       $$.type = BOOLEAN_TYPE; }
           | simple_expression { $$ = $1; }
           ;
@@ -750,7 +757,7 @@ simple_expression: additional_terms term  { if (!$1.isNull) {
                                               }
 
                                               switch ($1.additionOperator) {
-                                                case OR_SIGN: 
+                                                case OR_SIGN:
                                                   if ($2.type == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                     $$.type = BOOLEAN_TYPE;
                                                     sprintf($$.temp, "T%d", tempCount++);
@@ -771,7 +778,7 @@ simple_expression: additional_terms term  { if (!$1.isNull) {
                                                     addQuadruple($$.quadruple, &$$.quadrupleSize, $1.temp, "+", $2.temp, $$.temp, "");
                                                   }
                                                   break;
-                                                
+
                                                 case MINUS_OPERATOR:
                                                   if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                                     printf("Error: can't apply subtraction operator on non-numeric value\n");
@@ -797,7 +804,7 @@ additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
                                                               }
 
                                                               switch ($1.additionOperator) {
-                                                                case OR_SIGN: 
+                                                                case OR_SIGN:
                                                                   if ($2.type == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                     $$.type = BOOLEAN_TYPE;
                                                                     sprintf($$.temp, "T%d", tempCount++);
@@ -818,7 +825,7 @@ additional_terms: additional_terms term addition_operator { if (!$1.isNull) {
                                                                     addQuadruple($$.quadruple, &$$.quadrupleSize, $1.temp, "+", $2.temp, $$.temp, "");
                                                                   }
                                                                   break;
-                                                                
+
                                                                 case MINUS_OPERATOR:
                                                                   if (!(($1.type == INTEGER_TYPE || $1.type == REAL_TYPE) && ($2.type == INTEGER_TYPE || $2.type == REAL_TYPE))) {
                                                                     printf("Error: can't apply subtraction operator on non-numeric value\n");
@@ -858,7 +865,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                     }
 
                                     switch ($1.multiplicationOperator) {
-                                      case AND_SIGN: 
+                                      case AND_SIGN:
                                         if ($2.type == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                           $$.type = BOOLEAN_TYPE;
                                           sprintf($$.temp, "T%d", tempCount++);
@@ -869,7 +876,7 @@ term: additional_factors factor { if (!$1.isNull) {
                                         }
                                         break;
 
-                                      case REMAINDER_SIGN: 
+                                      case REMAINDER_SIGN:
                                         if (!($2.type == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                           printf("Error: can't apply modulo operator on non-integer value\n");
                                           return 1;
@@ -920,12 +927,12 @@ term: additional_factors factor { if (!$1.isNull) {
                                           }
 
                                           switch ($1.multiplicationOperator) {
-                                            case AND_SIGN: 
+                                            case AND_SIGN:
                                               printf("Error: can't apply boolean operator on non-boolean value\n");
                                               return 1;
                                               break;
 
-                                            case REMAINDER_SIGN: 
+                                            case REMAINDER_SIGN:
                                               if (!($3.type == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                 printf("Error: can't apply modulo operator on non-integer value\n");
                                                 return 1;
@@ -983,7 +990,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                         }
 
                                                                           switch ($1.multiplicationOperator) {
-                                                                            case AND_SIGN: 
+                                                                            case AND_SIGN:
                                                                               if ($2.type == BOOLEAN_TYPE && $1.type == BOOLEAN_TYPE) {
                                                                                 $$.type = BOOLEAN_TYPE;
                                                                                 sprintf($$.temp, "T%d", tempCount++);
@@ -994,7 +1001,7 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                               }
                                                                               break;
 
-                                                                            case REMAINDER_SIGN: 
+                                                                            case REMAINDER_SIGN:
                                                                               if (!($2.type == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                                                 printf("Error: can't apply modulo operator on non-integer value\n");
                                                                                 return 1;
@@ -1053,12 +1060,12 @@ additional_factors: additional_factors factor multiplication_operator { if (!$1.
                                                                                 }
 
                                                                                 switch ($1.multiplicationOperator) {
-                                                                                  case AND_SIGN: 
+                                                                                  case AND_SIGN:
                                                                                     printf("Error: can't apply boolean operator on non-boolean value\n");
                                                                                     return 1;
                                                                                     break;
 
-                                                                                  case REMAINDER_SIGN: 
+                                                                                  case REMAINDER_SIGN:
                                                                                     if (!($3.type == INTEGER_TYPE && $1.type == INTEGER_TYPE)){
                                                                                       printf("Error: can't apply modulo operator on non-integer value\n");
                                                                                       return 1;
@@ -1131,13 +1138,16 @@ factor: variable  { if(symbolTable.variables[$1.symbolTableIndex].typeInfo.type 
                       printf("Error: can't use array variable %s directly as a value\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                       return 1;
                     }
-                    
+
                     if(!symbolTable.variables[$1.symbolTableIndex].valueHasBeenAssigned) {
                       printf("Error: value of variable %s used before assigning \n", symbolTable.variables[$1.symbolTableIndex].identifier);
                       return 1;
                     }
-                    
-                    $$.quadrupleSize = 0;
+
+                    $$.quadrupleSize = $1.quadrupleSize;
+                    for (int i = 0; i < $1.quadrupleSize; i++) {
+                      $$.quadruple[i] = $1.quadruple[i];
+                    }
                     if (!$1.isIndexed) {
                       $$.type = symbolTable.variables[$1.symbolTableIndex].typeInfo.type;
                       strcpy($$.temp, symbolTable.variables[$1.symbolTableIndex].identifier);
@@ -1225,6 +1235,7 @@ variable: IDENTIFIER  { int variableIndex = -1;
 
                         $$.isIndexed = 0;
                         $$.symbolTableIndex = variableIndex;
+                        $$.quadrupleSize = 0;
                         free($1); }
         | indexed_variable { $$ = $1; }
         ;
@@ -1232,11 +1243,16 @@ indexed_variable: variable LSQUAREPAREN expression RSQUAREPAREN { if (symbolTabl
                                                                     printf("Error: can't access indexed element of non-array variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                                     return 1;
                                                                   }
-                                                                  
+
                                                                   if ($3.type != INTEGER_TYPE) {
                                                                     printf("Error: can't access non-integer index of array variable %s\n", symbolTable.variables[$1.symbolTableIndex].identifier);
                                                                     return 1;
                                                                   }
+
+                                                                  for (int i = 0; i < $3.quadrupleSize; i++) {
+                                                                    $$.quadruple[i] = $3.quadruple[i];
+                                                                  }
+                                                                  $$.quadrupleSize = $3.quadrupleSize;
 
                                                                   $$.symbolTableIndex = $1.symbolTableIndex;
                                                                   $$.isIndexed = 1;
@@ -1312,7 +1328,7 @@ char: DQUOTE string_character DQUOTE  { if(strlen($2) != 1) {
                                           printf("Error: character literal can only be a string of length 1\n");
                                           return 1;
                                         }
-                                        
+
                                         $$ = $2; }
       ;
 additional_string_characters: string_character additional_string_characters { if ($2 == NULL) $$ = $1;

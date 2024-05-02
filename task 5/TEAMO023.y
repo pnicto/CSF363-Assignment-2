@@ -582,7 +582,11 @@ while_statement: WHILE expression DO statement  { if ($2.type != BOOLEAN_TYPE) {
                                                       sprintf(startLabel, "Label%d", labelCount++);
                                                     }
 
-                                                    strcpy(endLabel, $2.quadruple[$2.quadrupleSize - 2].operand1);
+                                                    if ($2.quadrupleSize > 1 && strcmp($2.quadruple[$2.quadrupleSize - 2].result, "goto") == 0) {
+                                                      strcpy(endLabel, $2.quadruple[$2.quadrupleSize - 2].operand1);
+                                                    } else {
+                                                      sprintf(endLabel, "Label%d", labelCount++);
+                                                    }
 
                                                     if ($4.quadrupleSize > 0) {
                                                       strcpy($4.quadruple[0].label, "");

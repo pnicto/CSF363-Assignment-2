@@ -14,13 +14,28 @@ Compilation
 Task 1
 
 lex TEAMO023.l
-gcc lex.yy.c -lfl
+gcc lex.yy.c -ll
 
 Task 2
 yacc -d TEAMO023.y
 lex TEAMO023.l
-gcc y.tab.c lex.yy.c -lfl
+gcc y.tab.c lex.yy.c -ll
+
+Task 3
+yacc -d TEAMO023.y
+lex TEAMO023.l
+gcc y.tab.c lex.yy.c -ll
+
+Task 4
+yacc -d TEAMO023.y
+lex TEAMO023.l
+gcc y.tab.c lex.yy.c -ll
+
+Task 5
+yacc -d TEAMO023.y
+lex TEAMO023.l
+gcc y.tab.c lex.yy.c -ll
 
 Running
 
-./a.out file
+./a.out filename

@@ -1065,6 +1065,7 @@ int main(int argc, char *argv[]) {
 
   // looks like it defaults to stdin incase a file is not provided or is missing
   char *filename = argv[1];
+  printf("\n");
   FILE *file = fopen(filename, "r");
   yyin = file;
   yyparse();
@@ -1484,7 +1485,7 @@ void graphFinish() {
   }
   for (i = LMAX - 1; i > 0 && graph[i][0] == 0; i--)
     ;
-  printf("\n\nGraph %d:\n", graphNumber++);
+  // printf("\n\nGraph %d:\n", graphNumber++);
   for (j = 0; j <= i; j++) printf("\n%s", graph[j]);
   printf("\n");
 }

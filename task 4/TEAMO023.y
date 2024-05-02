@@ -1368,6 +1368,7 @@ int main(int argc, char *argv[]) {
 
   // looks like it defaults to stdin incase a file is not provided or is missing
   char *filename = argv[1];
+  printf("\n");
   FILE *file = fopen(filename, "r");
   yyin = file;
   yyparse();
